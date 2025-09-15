@@ -360,10 +360,13 @@
                     const origin = window.location.origin || '';
                     let returnUrl = '';
                     if (origin.includes('exp.direct') || origin.includes('localhost') || origin.startsWith('http')) {
-                        returnUrl = `${origin}/--/subscription/success?session_id=${sessionId}`;
+                        // For web/development, use the correct route without --
+                        returnUrl = `${origin}/subscription/success?session_id=${sessionId}`;
                     } else {
+                        // For mobile app deep linking
                         returnUrl = `radbiz://subscription/success?session_id=${sessionId}`;
                     }
+                    console.log('Redirecting to:', returnUrl);
                     window.location.href = returnUrl;
                 }, 1200);
                 

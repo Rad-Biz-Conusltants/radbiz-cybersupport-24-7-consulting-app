@@ -111,6 +111,15 @@
             border-radius: 8px;
             padding: 16px;
             margin-bottom: 16px;
+            color: #ffffff !important;
+        }
+        
+        #card-element * {
+            color: #ffffff !important;
+        }
+        
+        #card-element input {
+            color: #ffffff !important;
         }
         
         #card-errors {
@@ -272,7 +281,7 @@
                 },
                 rules: {
                     '.Input': {
-                        color: '#ffffff',
+                        color: '#ffffff !important',
                         backgroundColor: 'rgba(255, 255, 255, 0.05)',
                         border: '1px solid rgba(255, 255, 255, 0.2)'
                     },
@@ -281,10 +290,22 @@
                         boxShadow: '0 0 0 1px #00FF88'
                     },
                     '.Input::placeholder': {
-                        color: '#B0B0B0'
+                        color: '#B0B0B0 !important'
+                    },
+                    '.Input--invalid': {
+                        color: '#ffffff !important'
+                    },
+                    '.Input--complete': {
+                        color: '#ffffff !important'
                     },
                     '.Label': {
                         color: '#ffffff'
+                    },
+                    '.Tab': {
+                        color: '#ffffff !important'
+                    },
+                    '.Tab--selected': {
+                        color: '#00FF88 !important'
                     }
                 }
             }

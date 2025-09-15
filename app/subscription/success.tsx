@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CheckCircle, Crown } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -112,7 +112,7 @@ export default function SubscriptionSuccessScreen() {
         colors={[Colors.backgroundStart, Colors.backgroundEnd]}
         style={styles.container}
       >
-        <View style={[styles.content, { paddingTop: insets.top + 40 }]}>
+        <View style={[styles.scrollContent, { paddingTop: insets.top + 40 }]}>
           <View style={styles.loadingContainer}>
             <Crown size={48} color={Colors.primary} />
             <Text style={styles.loadingTitle}>Activating Subscription...</Text>
@@ -129,7 +129,7 @@ export default function SubscriptionSuccessScreen() {
         colors={[Colors.backgroundStart, Colors.backgroundEnd]}
         style={styles.container}
       >
-        <View style={[styles.content, { paddingTop: insets.top + 40 }]}>
+        <View style={[styles.scrollContent, { paddingTop: insets.top + 40 }]}>
           <View style={styles.errorContainer}>
             <Text style={styles.errorTitle}>Subscription Error</Text>
             <Text style={styles.errorText}>Unable to verify your subscription. Please contact support.</Text>
@@ -151,9 +151,11 @@ export default function SubscriptionSuccessScreen() {
       colors={[Colors.backgroundStart, Colors.backgroundEnd]}
       style={styles.container}
     >
-
-
-      <View style={[styles.content, { paddingTop: insets.top + 40 }]}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 40 }]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Success Icon */}
         <View style={styles.successIcon}>
           <LinearGradient
@@ -281,10 +283,9 @@ export default function SubscriptionSuccessScreen() {
             </View>
           </LinearGradient>
         </View>
-      </View>
 
-      {/* Action Buttons */}
-      <View style={[styles.actionButtons, { paddingBottom: insets.bottom + 20 }]}>
+        {/* Action Buttons */}
+        <View style={[styles.actionButtons, { paddingBottom: insets.bottom + 20 }]}>
         <TouchableOpacity style={styles.secondaryButton} onPress={handleViewProfile}>
           <LinearGradient
             colors={[Colors.cardBackground, '#2A2A2A']}
@@ -302,7 +303,8 @@ export default function SubscriptionSuccessScreen() {
             <Text style={styles.primaryButtonText}>Continue to Dashboard</Text>
           </LinearGradient>
         </TouchableOpacity>
-      </View>
+        </View>
+      </ScrollView>
     </LinearGradient>
   );
 }
@@ -310,6 +312,13 @@ export default function SubscriptionSuccessScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
   },
   header: {
     flexDirection: 'row',
@@ -330,10 +339,7 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 40,
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
+
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
@@ -486,7 +492,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   actionButtons: {
-    paddingHorizontal: 20,
     paddingTop: 20,
     gap: 12,
   },

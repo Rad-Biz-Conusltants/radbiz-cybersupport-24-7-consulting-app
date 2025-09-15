@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Platform, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, Monitor, Shield, AlertTriangle, ChevronDown, Paperclip, Send, X, FileText, Image as ImageIcon } from 'lucide-react-native';
+import { ArrowLeft, Monitor, Shield, AlertTriangle, ChevronDown, Paperclip, Send, X, FileText, Image as ImageIcon, CheckCircle, Home, Plus } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as DocumentPicker from 'expo-document-picker';
@@ -41,6 +41,9 @@ export default function NewTicketScreen() {
   const [showSupportTypeDropdown, setShowSupportTypeDropdown] = useState(false);
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [createdTicket, setCreatedTicket] = useState<{id: string, assignedTo: string} | null>(null);
+  const fadeAnim = useState(new Animated.Value(0))[0];
 
   const supportTypes = [
     { id: 'it', label: 'IT Support', icon: Monitor, description: 'Technical assistance & infrastructure' },
@@ -90,38 +93,39 @@ export default function NewTicketScreen() {
       });
       
       setIsSubmitting(false);
+      setCreatedTicket({ id: ticketId, assignedTo: assignedTech });
+      setShowSuccess(true);
       
-      Alert.alert(
-        '✅ Ticket Created Successfully!',
-        `Ticket ID: ${ticketId}\n\nAssigned to: ${assignedTech}\n\nYou will receive updates via email and can track progress in your dashboard.`,
-        [
-          {
-            text: 'View Dashboard',
-            onPress: () => {
-              router.dismissAll();
-              router.replace('/(tabs)/home');
-            }
-          },
-          {
-            text: 'Create Another',
-            style: 'cancel',
-            onPress: () => {
-              setForm({
-                supportType: 'it',
-                title: '',
-                description: '',
-                priority: 'medium',
-                urgency: 'normal',
-                attachments: []
-              });
-            }
-          }
-        ]
-      );
+      // Animate success screen
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+      
     } catch (error) {
       setIsSubmitting(false);
       Alert.alert('Error', 'Failed to create ticket. Please try again.');
     }
+  };
+
+  const handleCreateAnother = () => {
+    setShowSuccess(false);
+    setCreatedTicket(null);
+    fadeAnim.setValue(0);
+    setForm({
+      supportType: 'it',
+      title: '',
+      description: '',
+      priority: 'medium',
+      urgency: 'normal',
+      attachments: []
+    });
+  };
+
+  const handleGoToDashboard = () => {
+    router.dismissAll();
+    router.replace('/(tabs)/home');
   };
 
   const handlePickDocument = async () => {
@@ -182,6 +186,87 @@ export default function NewTicketScreen() {
 
   const selectedSupportType = supportTypes.find(type => type.id === form.supportType);
   const selectedPriority = priorities.find(priority => priority.id === form.priority);
+
+  if (showSuccess && createdTicket) {
+    return (
+      <LinearGradient
+        colors={[Colors.backgroundStart, Colors.backgroundEnd]}
+        style={styles.container}
+      >
+        <Animated.View style={[styles.successContainer, { opacity: fadeAnim }]}>
+          <View style={styles.successContent}>
+            <View style={styles.successIconContainer}>
+              <LinearGradient
+                colors={[Colors.success + '20', Colors.success + '10']}
+                style={styles.successIconGradient}
+              >
+                <CheckCircle size={64} color={Colors.success} />
+              </LinearGradient>
+            </View>
+            
+            <Text style={styles.successTitle}>Ticket Created Successfully!</Text>
+            <Text style={styles.successSubtitle}>Your support request has been submitted</Text>
+            
+            <View style={styles.ticketInfoCard}>
+              <LinearGradient
+                colors={[Colors.cardBackground, '#2A2A2A']}
+                style={styles.ticketInfoGradient}
+              >
+                <View style={styles.ticketInfoRow}>
+                  <Text style={styles.ticketInfoLabel}>Ticket ID:</Text>
+                  <Text style={styles.ticketInfoValue}>{createdTicket.id}</Text>
+                </View>
+                <View style={styles.ticketInfoDivider} />
+                <View style={styles.ticketInfoRow}>
+                  <Text style={styles.ticketInfoLabel}>Assigned to:</Text>
+                  <Text style={styles.ticketInfoValue}>{createdTicket.assignedTo}</Text>
+                </View>
+                <View style={styles.ticketInfoDivider} />
+                <View style={styles.ticketInfoRow}>
+                  <Text style={styles.ticketInfoLabel}>Status:</Text>
+                  <View style={styles.statusBadge}>
+                    <Text style={styles.statusText}>Open</Text>
+                  </View>
+                </View>
+              </LinearGradient>
+            </View>
+            
+            <Text style={styles.successMessage}>
+              You will receive updates via email and can track progress in your dashboard.
+            </Text>
+            
+            <View style={styles.successActions}>
+              <TouchableOpacity 
+                style={styles.primaryActionButton}
+                onPress={handleGoToDashboard}
+              >
+                <LinearGradient
+                  colors={[Colors.primary, Colors.primaryDark]}
+                  style={styles.actionButtonGradient}
+                >
+                  <Home size={20} color={Colors.textPrimary} />
+                  <Text style={styles.primaryActionText}>View Dashboard</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.secondaryActionButton}
+                onPress={handleCreateAnother}
+              >
+                <LinearGradient
+                  colors={[Colors.cardBackground, '#2A2A2A']}
+                  style={styles.actionButtonGradient}
+                >
+                  <Plus size={20} color={Colors.textSecondary} />
+                  <Text style={styles.secondaryActionText}>Create Another Ticket</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Animated.View>
+      </LinearGradient>
+    );
+  }
 
   return (
     <LinearGradient
@@ -656,6 +741,122 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: Colors.textPrimary,
+    marginLeft: 8,
+  },
+  successContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  successContent: {
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  successIconContainer: {
+    marginBottom: 32,
+  },
+  successIconGradient: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  successTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  successSubtitle: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  ticketInfoCard: {
+    width: '100%',
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 24,
+  },
+  ticketInfoGradient: {
+    padding: 20,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    borderRadius: 16,
+  },
+  ticketInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  ticketInfoLabel: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    fontWeight: '500',
+  },
+  ticketInfoValue: {
+    fontSize: 14,
+    color: Colors.textPrimary,
+    fontWeight: '600',
+  },
+  ticketInfoDivider: {
+    height: 1,
+    backgroundColor: Colors.cardBorder,
+    marginVertical: 4,
+  },
+  statusBadge: {
+    backgroundColor: Colors.success + '20',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusText: {
+    fontSize: 12,
+    color: Colors.success,
+    fontWeight: '600',
+  },
+  successMessage: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 32,
+  },
+  successActions: {
+    width: '100%',
+    gap: 12,
+  },
+  primaryActionButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  secondaryActionButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  actionButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+  },
+  primaryActionText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    marginLeft: 8,
+  },
+  secondaryActionText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.textSecondary,
     marginLeft: 8,
   },
 });

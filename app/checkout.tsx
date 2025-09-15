@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Shield, Check, CreditCard, X } from 'lucide-react-native';
-import { router } from 'expo-router';
+import { Shield, Check, CreditCard, X, Monitor, DollarSign } from 'lucide-react-native';
+import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/providers/auth-provider';
 import { useSubscription } from '@/providers/subscription-provider';
@@ -11,21 +11,25 @@ import Colors from '@/constants/colors';
 export default function CheckoutScreen() {
   const { user } = useAuth();
   const { setSubscription } = useSubscription();
-  const [selectedPlan, setSelectedPlan] = useState<'individual' | 'business'>(user?.planType || 'individual');
+  const { plan: urlPlan } = useLocalSearchParams<{ plan?: string }>();
+  const [selectedPlan, setSelectedPlan] = useState<'individual' | 'business' | 'guest'>(urlPlan === 'guest' ? 'guest' : (user?.planType || 'individual'));
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [loading, setLoading] = useState(false);
+  
+  const isGuestPlan = selectedPlan === 'guest';
+  const supportType = user ? 'cybersecurity' : 'it'; // Default based on user or fallback
 
   const plans = {
     individual: {
       monthly: 29,
       yearly: 290,
       features: [
-        '24/7 IT Support Access',
+        '24/7 IT & Cybersecurity Support',
         'Personal Device Protection',
         'Monthly Security Audits',
         'Priority Email Support',
         'Incident Response',
-        'Basic Cyber Security Training',
+        'Basic Security Training',
       ],
     },
     business: {
@@ -43,26 +47,53 @@ export default function CheckoutScreen() {
         'Emergency Response Hotline',
       ],
     },
+    guest: {
+      deposit: 150,
+      hourly: 100,
+      features: [
+        'Immediate Support Access',
+        'Pay-as-you-go Pricing',
+        'No Long-term Commitment',
+        'Expert IT & Cybersecurity Help',
+        'Emergency Response Available',
+        'One-time Issue Resolution',
+      ],
+    },
   };
 
-  const currentPlan = plans[selectedPlan];
-  const price = currentPlan[billingCycle];
-  const yearlyDiscount = billingCycle === 'yearly' ? Math.round((currentPlan.monthly * 12 - currentPlan.yearly) / (currentPlan.monthly * 12) * 100) : 0;
+  const currentPlan = plans[selectedPlan as keyof typeof plans];
+  const price = isGuestPlan ? currentPlan.deposit : currentPlan[billingCycle as keyof typeof currentPlan];
+  const yearlyDiscount = !isGuestPlan && billingCycle === 'yearly' ? Math.round((currentPlan.monthly * 12 - currentPlan.yearly) / (currentPlan.monthly * 12) * 100) : 0;
+  
+  const getSupportTypeInfo = () => {
+    return {
+      title: user ? 'IT & Cybersecurity Support' : 'Professional Support',
+      subtitle: 'Expert assistance for all your technical needs',
+      icon: supportType === 'it' ? Monitor : Shield,
+      color: supportType === 'it' ? Colors.accent : Colors.primary,
+    };
+  };
+  
+  const supportInfo = getSupportTypeInfo();
 
   const handleCheckout = async () => {
     setLoading(true);
     
-
-    
     try {
-      // In a real app, you would:
-      // 1. Call your backend to create a Stripe checkout session
-      // 2. Get the checkout URL
-      // 3. Open it in a web browser or in-app browser
+      let alertMessage = '';
+      let planName = '';
+      
+      if (isGuestPlan) {
+        planName = 'Guest Support';
+        alertMessage = `You would be redirected to Stripe to complete payment for:\n\n${planName}\n${currentPlan.deposit} deposit + ${currentPlan.hourly}/hour\n\nFor demo purposes, we'll simulate a successful payment.`;
+      } else {
+        planName = selectedPlan === 'individual' ? 'Individual' : 'Small Business Pro';
+        alertMessage = `You would be redirected to Stripe to complete payment for:\n\n${planName} Plan\n${price}/${billingCycle === 'monthly' ? 'month' : 'year'}\n\nFor demo purposes, we'll simulate a successful payment.`;
+      }
       
       Alert.alert(
         'Stripe Checkout',
-        `You would be redirected to Stripe to complete payment for:\n\n${selectedPlan === 'individual' ? 'Individual' : 'Small Business'} Plan\n$${price}/${billingCycle === 'monthly' ? 'month' : 'year'}\n\nFor demo purposes, we'll simulate a successful payment.`,
+        alertMessage,
         [
           {
             text: 'Cancel',
@@ -78,16 +109,22 @@ export default function CheckoutScreen() {
                 }
               });
               
-              setSubscription({
-                plan: selectedPlan,
-                billingCycle,
-                status: 'active',
-                nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-              });
-              
-              Alert.alert('Success!', 'Your subscription is now active.', [
-                { text: 'OK', onPress: () => router.replace('/(tabs)/home') }
-              ]);
+              if (isGuestPlan) {
+                Alert.alert('Payment Successful!', 'Your guest support session is ready. You can now get immediate help.', [
+                  { text: 'Start Getting Support', onPress: () => router.replace('/(tabs)/support') }
+                ]);
+              } else {
+                setSubscription({
+                  plan: selectedPlan as 'individual' | 'business',
+                  billingCycle,
+                  status: 'active',
+                  nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                });
+                
+                Alert.alert('Success!', 'Your subscription is now active. Start getting support now!', [
+                  { text: 'Start Getting Support', onPress: () => router.replace('/(tabs)/support') }
+                ]);
+              }
             },
           },
         ]
@@ -110,113 +147,170 @@ export default function CheckoutScreen() {
             style={styles.closeButton}
             onPress={() => router.back()}
           >
-            <X size={24} color="#FFFFFF" />
+            <X size={24} color={Colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Choose Your Plan</Text>
+          <Text style={styles.headerTitle}>
+            {isGuestPlan ? 'Guest Support Payment' : 'Choose Your Plan'}
+          </Text>
           <View style={styles.headerSpacer} />
         </View>
+        
+        {user && (
+          <View style={styles.supportTypeHeader}>
+            <View style={[styles.supportTypeIcon, { backgroundColor: supportInfo.color + '20' }]}>
+              <supportInfo.icon size={24} color={supportInfo.color} />
+            </View>
+            <View style={styles.supportTypeInfo}>
+              <Text style={styles.supportTypeTitle}>{supportInfo.title}</Text>
+              <Text style={styles.supportTypeSubtitle}>{supportInfo.subtitle}</Text>
+            </View>
+          </View>
+        )}
 
         <ScrollView 
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.billingToggle}>
-            <TouchableOpacity
-              style={[styles.billingOption, billingCycle === 'monthly' && styles.billingOptionActive]}
-              onPress={() => setBillingCycle('monthly')}
-            >
-              <Text style={[styles.billingOptionText, billingCycle === 'monthly' && styles.billingOptionTextActive]}>
-                Monthly
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.billingOption, billingCycle === 'yearly' && styles.billingOptionActive]}
-              onPress={() => setBillingCycle('yearly')}
-            >
-              <Text style={[styles.billingOptionText, billingCycle === 'yearly' && styles.billingOptionTextActive]}>
-                Yearly
-              </Text>
-              {yearlyDiscount > 0 && (
-                <View style={styles.discountBadge}>
-                  <Text style={styles.discountText}>Save {yearlyDiscount}%</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
+          {!isGuestPlan && (
+            <View style={styles.billingToggle}>
+              <TouchableOpacity
+                style={[styles.billingOption, billingCycle === 'monthly' && styles.billingOptionActive]}
+                onPress={() => setBillingCycle('monthly')}
+              >
+                <Text style={[styles.billingOptionText, billingCycle === 'monthly' && styles.billingOptionTextActive]}>
+                  Monthly
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.billingOption, billingCycle === 'yearly' && styles.billingOptionActive]}
+                onPress={() => setBillingCycle('yearly')}
+              >
+                <Text style={[styles.billingOptionText, billingCycle === 'yearly' && styles.billingOptionTextActive]}>
+                  Yearly
+                </Text>
+                {yearlyDiscount > 0 && (
+                  <View style={styles.discountBadge}>
+                    <Text style={styles.discountText}>Save {yearlyDiscount}%</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
 
-          <TouchableOpacity
-            style={[styles.planCard, selectedPlan === 'individual' && styles.planCardActive]}
-            onPress={() => setSelectedPlan('individual')}
-          >
-            <View style={styles.planHeader}>
-              <Text style={styles.planName}>Individual</Text>
-              <View style={styles.priceContainer}>
-                <Text style={styles.price}>${plans.individual[billingCycle]}</Text>
-                <Text style={styles.period}>/{billingCycle === 'monthly' ? 'month' : 'year'}</Text>
+          {isGuestPlan ? (
+            <View style={[styles.planCard, styles.planCardActive]}>
+              <View style={styles.guestBadge}>
+                <DollarSign size={16} color={Colors.textPrimary} />
+                <Text style={styles.guestBadgeText}>PAY AS YOU GO</Text>
               </View>
-            </View>
-            <View style={styles.featuresContainer}>
-              {plans.individual.features.map((feature) => (
-                <View key={feature} style={styles.feature}>
-                  <Check size={16} color={Colors.success} />
-                  <Text style={styles.featureText}>{feature}</Text>
+              <View style={styles.planHeader}>
+                <Text style={styles.planName}>Guest Support</Text>
+                <View style={styles.guestPriceContainer}>
+                  <View style={styles.guestPriceRow}>
+                    <Text style={styles.price}>${plans.guest.deposit}</Text>
+                    <Text style={styles.period}>deposit</Text>
+                  </View>
+                  <Text style={styles.guestPlusText}>+</Text>
+                  <View style={styles.guestPriceRow}>
+                    <Text style={styles.price}>${plans.guest.hourly}</Text>
+                    <Text style={styles.period}>/hour</Text>
+                  </View>
                 </View>
-              ))}
-            </View>
-            {selectedPlan === 'individual' && (
-              <View style={styles.selectedIndicator}>
-                <Check size={20} color="#FFFFFF" />
               </View>
-            )}
-          </TouchableOpacity>
+              <View style={styles.featuresContainer}>
+                {plans.guest.features.map((feature) => (
+                  <View key={feature} style={styles.feature}>
+                    <Check size={16} color={Colors.success} />
+                    <Text style={styles.featureText}>{feature}</Text>
+                  </View>
+                ))}
+              </View>
+              <View style={styles.selectedIndicator}>
+                <Check size={20} color={Colors.textPrimary} />
+              </View>
+            </View>
+          ) : (
+            <>
+              <TouchableOpacity
+                style={[styles.planCard, selectedPlan === 'individual' && styles.planCardActive]}
+                onPress={() => setSelectedPlan('individual')}
+              >
+                <View style={styles.planHeader}>
+                  <Text style={styles.planName}>Individual</Text>
+                  <View style={styles.priceContainer}>
+                    <Text style={styles.price}>${plans.individual[billingCycle]}</Text>
+                    <Text style={styles.period}>/{billingCycle === 'monthly' ? 'month' : 'year'}</Text>
+                  </View>
+                </View>
+                <View style={styles.featuresContainer}>
+                  {plans.individual.features.map((feature) => (
+                    <View key={feature} style={styles.feature}>
+                      <Check size={16} color={Colors.success} />
+                      <Text style={styles.featureText}>{feature}</Text>
+                    </View>
+                  ))}
+                </View>
+                {selectedPlan === 'individual' && (
+                  <View style={styles.selectedIndicator}>
+                    <Check size={20} color={Colors.textPrimary} />
+                  </View>
+                )}
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.planCard, selectedPlan === 'business' && styles.planCardActive]}
-            onPress={() => setSelectedPlan('business')}
-          >
-            <View style={styles.recommendedBadge}>
-              <Text style={styles.recommendedText}>BEST FOR SMALL BUSINESS</Text>
-            </View>
-            <View style={styles.planHeader}>
-              <Text style={styles.planName}>Small Business Pro</Text>
-              <View style={styles.priceContainer}>
-                <Text style={styles.price}>${plans.business[billingCycle]}</Text>
-                <Text style={styles.period}>/{billingCycle === 'monthly' ? 'month' : 'year'}</Text>
-              </View>
-            </View>
-            <View style={styles.featuresContainer}>
-              {plans.business.features.map((feature) => (
-                <View key={feature} style={styles.feature}>
-                  <Check size={16} color={Colors.success} />
-                  <Text style={styles.featureText}>{feature}</Text>
+              <TouchableOpacity
+                style={[styles.planCard, selectedPlan === 'business' && styles.planCardActive]}
+                onPress={() => setSelectedPlan('business')}
+              >
+                <View style={styles.recommendedBadge}>
+                  <Text style={styles.recommendedText}>BEST FOR SMALL BUSINESS</Text>
                 </View>
-              ))}
-            </View>
-            {selectedPlan === 'business' && (
-              <View style={styles.selectedIndicator}>
-                <Check size={20} color="#FFFFFF" />
-              </View>
-            )}
-          </TouchableOpacity>
+                <View style={styles.planHeader}>
+                  <Text style={styles.planName}>Small Business Pro</Text>
+                  <View style={styles.priceContainer}>
+                    <Text style={styles.price}>${plans.business[billingCycle]}</Text>
+                    <Text style={styles.period}>/{billingCycle === 'monthly' ? 'month' : 'year'}</Text>
+                  </View>
+                </View>
+                <View style={styles.featuresContainer}>
+                  {plans.business.features.map((feature) => (
+                    <View key={feature} style={styles.feature}>
+                      <Check size={16} color={Colors.success} />
+                      <Text style={styles.featureText}>{feature}</Text>
+                    </View>
+                  ))}
+                </View>
+                {selectedPlan === 'business' && (
+                  <View style={styles.selectedIndicator}>
+                    <Check size={20} color={Colors.textPrimary} />
+                  </View>
+                )}
+              </TouchableOpacity>
+            </>
+          )}
 
           <View style={styles.summary}>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Plan</Text>
               <Text style={styles.summaryValue}>
-                {selectedPlan === 'individual' ? 'Individual' : 'Small Business Pro'}
+                {isGuestPlan ? 'Guest Support' : (selectedPlan === 'individual' ? 'Individual' : 'Small Business Pro')}
               </Text>
             </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Billing Cycle</Text>
-              <Text style={styles.summaryValue}>
-                {billingCycle === 'monthly' ? 'Monthly' : 'Yearly'}
-              </Text>
-            </View>
+            {!isGuestPlan && (
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Billing Cycle</Text>
+                <Text style={styles.summaryValue}>
+                  {billingCycle === 'monthly' ? 'Monthly' : 'Yearly'}
+                </Text>
+              </View>
+            )}
             <View style={styles.divider} />
             <View style={styles.summaryRow}>
               <Text style={styles.totalLabel}>Total</Text>
               <Text style={styles.totalValue}>
-                ${price}/{billingCycle === 'monthly' ? 'mo' : 'yr'}
+                {isGuestPlan 
+                  ? `${currentPlan.deposit} + ${currentPlan.hourly}/hr`
+                  : `${price}/${billingCycle === 'monthly' ? 'mo' : 'yr'}`
+                }
               </Text>
             </View>
           </View>
@@ -234,7 +328,7 @@ export default function CheckoutScreen() {
             >
               <CreditCard size={20} color="#FFFFFF" />
               <Text style={styles.checkoutText}>
-                {loading ? 'Processing...' : 'Continue to Payment'}
+                {loading ? 'Processing...' : (isGuestPlan ? 'Pay Deposit & Start' : 'Continue to Payment')}
               </Text>
             </LinearGradient>
           </TouchableOpacity>
@@ -265,27 +359,59 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#334155',
+    borderBottomColor: Colors.cardBorder,
   },
   closeButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#1E293B',
+    backgroundColor: Colors.cardBackground,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
+  },
+  supportTypeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: Colors.cardBackground,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.cardBorder,
+    gap: 16,
+  },
+  supportTypeIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  supportTypeInfo: {
+    flex: 1,
+  },
+  supportTypeTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 2,
+  },
+  supportTypeSubtitle: {
+    fontSize: 14,
+    color: Colors.textSecondary,
   },
   scrollContent: {
     padding: 20,
   },
   billingToggle: {
     flexDirection: 'row',
-    backgroundColor: '#1E293B',
+    backgroundColor: Colors.cardBackground,
     borderRadius: 12,
     padding: 4,
     marginBottom: 24,
@@ -298,21 +424,21 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   billingOptionActive: {
-    backgroundColor: '#334155',
+    backgroundColor: Colors.cardBorder,
   },
   billingOptionText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#64748B',
+    color: Colors.textMuted,
   },
   billingOptionTextActive: {
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
   },
   discountBadge: {
     position: 'absolute',
     top: -8,
     right: 8,
-    backgroundColor: '#10B981',
+    backgroundColor: Colors.success,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
@@ -320,25 +446,25 @@ const styles = StyleSheet.create({
   discountText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
   },
   planCard: {
-    backgroundColor: '#1E293B',
+    backgroundColor: Colors.cardBackground,
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: '#334155',
+    borderColor: Colors.cardBorder,
     position: 'relative',
   },
   planCardActive: {
-    borderColor: '#3B82F6',
+    borderColor: Colors.primary,
   },
   recommendedBadge: {
     position: 'absolute',
     top: -10,
     left: 20,
-    backgroundColor: '#F59E0B',
+    backgroundColor: Colors.warning,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 8,
@@ -346,7 +472,24 @@ const styles = StyleSheet.create({
   recommendedText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
+  },
+  guestBadge: {
+    position: 'absolute',
+    top: -10,
+    left: 20,
+    backgroundColor: Colors.accent,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  guestBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.textPrimary,
   },
   selectedIndicator: {
     position: 'absolute',
@@ -355,7 +498,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#3B82F6',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -365,7 +508,7 @@ const styles = StyleSheet.create({
   planName: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
     marginBottom: 8,
   },
   priceContainer: {
@@ -375,12 +518,26 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
   },
   period: {
     fontSize: 16,
-    color: '#94A3B8',
+    color: Colors.textSecondary,
     marginLeft: 4,
+  },
+  guestPriceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  guestPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  guestPlusText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: Colors.textSecondary,
   },
   featuresContainer: {
     gap: 10,
@@ -392,11 +549,11 @@ const styles = StyleSheet.create({
   },
   featureText: {
     fontSize: 14,
-    color: '#CBD5E1',
+    color: Colors.textSecondary,
     flex: 1,
   },
   summary: {
-    backgroundColor: '#1E293B',
+    backgroundColor: Colors.cardBackground,
     borderRadius: 12,
     padding: 20,
     marginTop: 8,
@@ -409,27 +566,27 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: Colors.textSecondary,
   },
   summaryValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
   },
   divider: {
     height: 1,
-    backgroundColor: '#334155',
+    backgroundColor: Colors.cardBorder,
     marginVertical: 12,
   },
   totalLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
   },
   totalValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#3B82F6',
+    color: Colors.primary,
   },
   checkoutButton: {
     marginBottom: 16,
@@ -443,7 +600,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   checkoutText: {
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
     fontSize: 18,
     fontWeight: '600',
   },
@@ -455,7 +612,7 @@ const styles = StyleSheet.create({
   },
   securityText: {
     fontSize: 12,
-    color: '#64748B',
+    color: Colors.textMuted,
     textAlign: 'center',
   },
   headerSpacer: {

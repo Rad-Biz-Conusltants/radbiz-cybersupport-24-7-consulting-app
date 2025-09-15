@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Shield, Lock, Users, CheckCircle, ArrowRight, Zap } from 'lucide-react-native';
+import { Shield, Monitor, ArrowRight, Clock, DollarSign } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/providers/auth-provider';
+import Colors from '@/constants/colors';
 
 export default function LandingScreen() {
   const { user } = useAuth();
@@ -14,67 +15,38 @@ export default function LandingScreen() {
     }
   }, [user]);
 
-  const features = [
+  const supportOptions = [
     {
+      id: 'it',
+      title: 'IT Support',
+      subtitle: 'Technical assistance & infrastructure management',
+      description: 'Get expert help with hardware, software, network issues, and system maintenance.',
+      icon: Monitor,
+      color: Colors.accent,
+      gradient: [Colors.accent, Colors.accentDark] as [string, string],
+    },
+    {
+      id: 'cybersecurity',
+      title: 'Cybersecurity Support',
+      subtitle: 'Advanced threat protection & security monitoring',
+      description: 'Protect your business from cyber threats with 24/7 monitoring and incident response.',
       icon: Shield,
-      title: '24/7 Protection',
-      description: 'Round-the-clock monitoring and support',
-      color: '#3B82F6',
-    },
-    {
-      icon: Zap,
-      title: 'Instant Response',
-      description: 'Average response time under 5 minutes',
-      color: '#8B5CF6',
-    },
-    {
-      icon: Lock,
-      title: 'Enterprise Security',
-      description: 'Bank-level encryption and protection',
-      color: '#10B981',
-    },
-    {
-      icon: Users,
-      title: 'Expert Team',
-      description: 'Certified security professionals',
-      color: '#F59E0B',
+      color: Colors.primary,
+      gradient: [Colors.primary, Colors.primaryDark] as [string, string],
     },
   ];
 
-  const plans = [
-    {
-      name: 'Individual',
-      price: '$29',
-      period: '/month',
-      features: [
-        '24/7 Support Access',
-        'Personal Device Protection',
-        'Monthly Security Audits',
-        'Priority Email Support',
-        'Incident Response',
-      ],
-      gradient: ['#3B82F6', '#2563EB'] as [string, string],
-    },
-    {
-      name: 'Small Business',
-      price: '$99',
-      period: '/month',
-      features: [
-        'Everything in Individual',
-        'Up to 10 Devices',
-        'Weekly Security Reports',
-        'Dedicated Account Manager',
-        'Custom Security Policies',
-        'Team Training Sessions',
-      ],
-      gradient: ['#8B5CF6', '#7C3AED'] as [string, string],
-      popular: true,
-    },
-  ];
+  const handleSupportSelection = (supportType: string) => {
+    router.push(`/(auth)/signup?supportType=${supportType}`);
+  };
+
+  const handleGuestSupport = () => {
+    router.push('/checkout?plan=guest');
+  };
 
   return (
     <LinearGradient
-      colors={['#0F172A', '#1E293B']}
+      colors={[Colors.backgroundStart, Colors.backgroundEnd]}
       style={styles.container}
     >
       <SafeAreaView style={styles.safeArea}>
@@ -84,8 +56,12 @@ export default function LandingScreen() {
         >
           <View style={styles.header}>
             <View style={styles.logoContainer}>
-              <Shield size={32} color="#3B82F6" />
-              <Text style={styles.logoText}>RadBiz Security</Text>
+              <Image 
+                source={require('@/assets/images/adaptive-icon.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
+              <Text style={styles.logoText}>RadBiz Consultants</Text>
             </View>
             <TouchableOpacity 
               style={styles.signInButton}
@@ -97,109 +73,88 @@ export default function LandingScreen() {
 
           <View style={styles.heroSection}>
             <Text style={styles.heroTitle}>
-              Enterprise-Grade{'\n'}Cybersecurity Support
+              24/7 IT & Cybersecurity{'\n'}Support
             </Text>
             <Text style={styles.heroSubtitle}>
-              24/7 IT and cybersecurity expertise at your fingertips.{'\n'}
-              Protect your business from threats before they happen.
+              Professional IT and cybersecurity expertise for individuals and small businesses.{'\n'}
+              Choose your support type and start protecting your digital assets today.
             </Text>
             
             <View style={styles.statsContainer}>
               <View style={styles.stat}>
-                <Text style={styles.statNumber}>99.9%</Text>
-                <Text style={styles.statLabel}>Uptime</Text>
+                <Clock size={20} color={Colors.primary} />
+                <Text style={styles.statLabel}>24/7 Support</Text>
               </View>
               <View style={styles.stat}>
-                <Text style={styles.statNumber}>5 min</Text>
-                <Text style={styles.statLabel}>Response Time</Text>
+                <Shield size={20} color={Colors.accent} />
+                <Text style={styles.statLabel}>Expert Team</Text>
               </View>
               <View style={styles.stat}>
-                <Text style={styles.statNumber}>10k+</Text>
-                <Text style={styles.statLabel}>Protected Devices</Text>
+                <Monitor size={20} color={Colors.primary} />
+                <Text style={styles.statLabel}>All Devices</Text>
               </View>
-            </View>
-
-            <TouchableOpacity 
-              style={styles.ctaButton}
-              onPress={() => router.push('/(auth)/signup')}
-            >
-              <LinearGradient
-                colors={['#3B82F6', '#2563EB']}
-                style={styles.ctaGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-              >
-                <Text style={styles.ctaText}>Start Free Trial</Text>
-                <ArrowRight size={20} color="#FFFFFF" />
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.featuresSection}>
-            <Text style={styles.sectionTitle}>Why Choose RadBiz?</Text>
-            <View style={styles.featuresGrid}>
-              {features.map((feature) => (
-                <View key={feature.title} style={styles.featureCard}>
-                  <View style={[styles.featureIcon, { backgroundColor: feature.color + '20' }]}>
-                    <feature.icon size={24} color={feature.color} />
-                  </View>
-                  <Text style={styles.featureTitle}>{feature.title}</Text>
-                  <Text style={styles.featureDescription}>{feature.description}</Text>
-                </View>
-              ))}
             </View>
           </View>
 
-          <View style={styles.pricingSection}>
-            <Text style={styles.sectionTitle}>Choose Your Plan</Text>
-            <Text style={styles.sectionSubtitle}>
-              Start with a 14-day free trial. No credit card required.
-            </Text>
+          <View style={styles.supportSection}>
+            <Text style={styles.sectionTitle}>Which Support Do You Need?</Text>
             
-            {plans.map((plan) => (
-              <View key={plan.name} style={styles.planCard}>
-                {plan.popular && (
-                  <View style={styles.popularBadge}>
-                    <Text style={styles.popularText}>MOST POPULAR</Text>
+            {supportOptions.map((option) => (
+              <View key={option.id} style={styles.supportCard}>
+                <View style={styles.supportHeader}>
+                  <View style={[styles.supportIcon, { backgroundColor: option.color + '20' }]}>
+                    <option.icon size={32} color={option.color} />
                   </View>
-                )}
-                <LinearGradient
-                  colors={plan.gradient}
-                  style={styles.planGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <Text style={styles.planName}>{plan.name}</Text>
-                  <View style={styles.priceContainer}>
-                    <Text style={styles.planPrice}>{plan.price}</Text>
-                    <Text style={styles.planPeriod}>{plan.period}</Text>
+                  <View style={styles.supportInfo}>
+                    <Text style={styles.supportTitle}>{option.title}</Text>
+                    <Text style={styles.supportSubtitle}>{option.subtitle}</Text>
                   </View>
-                </LinearGradient>
-                
-                <View style={styles.planFeatures}>
-                  {plan.features.map((feature) => (
-                    <View key={feature} style={styles.planFeature}>
-                      <CheckCircle size={16} color="#10B981" />
-                      <Text style={styles.planFeatureText}>{feature}</Text>
-                    </View>
-                  ))}
                 </View>
+                
+                <Text style={styles.supportDescription}>{option.description}</Text>
                 
                 <TouchableOpacity 
-                  style={[styles.selectPlanButton, plan.popular && styles.popularButton]}
-                  onPress={() => router.push('/(auth)/signup')}
+                  style={styles.trialButton}
+                  onPress={() => handleSupportSelection(option.id)}
                 >
-                  <Text style={[styles.selectPlanText, plan.popular && styles.popularButtonText]}>
-                    Get Started
-                  </Text>
+                  <LinearGradient
+                    colors={option.gradient}
+                    style={styles.trialGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                  >
+                    <Text style={styles.trialButtonText}>Start Free Trial</Text>
+                    <ArrowRight size={18} color="#FFFFFF" />
+                  </LinearGradient>
                 </TouchableOpacity>
               </View>
             ))}
           </View>
 
+          <View style={styles.guestSection}>
+            <View style={styles.guestCard}>
+              <View style={styles.guestHeader}>
+                <DollarSign size={24} color={Colors.warning} />
+                <Text style={styles.guestTitle}>Need Immediate Help?</Text>
+              </View>
+              <Text style={styles.guestDescription}>
+                Get instant support without a subscription. Pay as you go with our guest support option.
+              </Text>
+              <View style={styles.guestPricing}>
+                <Text style={styles.guestPrice}>$150 deposit + $100/hour thereafter</Text>
+              </View>
+              <TouchableOpacity 
+                style={styles.guestButton}
+                onPress={handleGuestSupport}
+              >
+                <Text style={styles.guestButtonText}>Get Guest Support</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              © 2025 RadBiz Security. Enterprise protection for everyone.
+              © 2025 RadBiz Consultants. Professional IT & Cybersecurity Support.
             </Text>
           </View>
         </ScrollView>
@@ -228,227 +183,195 @@ const styles = StyleSheet.create({
   logoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
+  },
+  logoImage: {
+    width: 40,
+    height: 40,
   },
   logoText: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
   },
   signInButton: {
     paddingHorizontal: 20,
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#3B82F6',
+    borderColor: Colors.accent,
   },
   signInText: {
-    color: '#3B82F6',
+    color: Colors.accent,
     fontWeight: '600',
   },
   heroSection: {
     paddingHorizontal: 20,
     paddingTop: 40,
-    paddingBottom: 60,
+    paddingBottom: 40,
     alignItems: 'center',
   },
   heroTitle: {
     fontSize: 36,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
     textAlign: 'center',
     marginBottom: 16,
     lineHeight: 42,
   },
   heroSubtitle: {
     fontSize: 16,
-    color: '#94A3B8',
+    color: Colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 40,
+    marginBottom: 32,
     lineHeight: 24,
   },
   statsContainer: {
     flexDirection: 'row',
     gap: 40,
-    marginBottom: 40,
+    marginBottom: 20,
   },
   stat: {
     alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#3B82F6',
+    gap: 8,
   },
   statLabel: {
     fontSize: 12,
-    color: '#94A3B8',
-    marginTop: 4,
+    color: Colors.textSecondary,
+    fontWeight: '600',
   },
-  ctaButton: {
+  supportSection: {
+    paddingHorizontal: 20,
+    marginBottom: 40,
+  },
+  sectionTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  supportCard: {
+    backgroundColor: Colors.cardBackground,
+    borderRadius: 20,
+    padding: 24,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  supportHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 16,
+  },
+  supportIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  supportInfo: {
+    flex: 1,
+  },
+  supportTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  supportSubtitle: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    fontWeight: '500',
+  },
+  supportDescription: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  trialButton: {
     width: '100%',
-    maxWidth: 320,
   },
-  ctaGradient: {
+  trialGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 16,
-    borderRadius: 12,
-  },
-  ctaText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  featuresSection: {
-    paddingHorizontal: 20,
-    marginBottom: 60,
-  },
-  sectionTitle: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    marginBottom: 40,
-  },
-  sectionSubtitle: {
-    fontSize: 16,
-    color: '#94A3B8',
-    textAlign: 'center',
-    marginBottom: 32,
-  },
-  featuresGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-    justifyContent: 'center',
-  },
-  featureCard: {
-    width: '48%',
-    maxWidth: 180,
-    backgroundColor: '#1E293B',
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  featureIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  featureTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  featureDescription: {
-    fontSize: 14,
-    color: '#94A3B8',
-    textAlign: 'center',
-  },
-  pricingSection: {
-    paddingHorizontal: 20,
-    marginBottom: 60,
-  },
-  planCard: {
-    backgroundColor: '#1E293B',
-    borderRadius: 20,
-    marginBottom: 20,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  popularBadge: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    backgroundColor: '#F59E0B',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-    zIndex: 1,
-  },
-  popularText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  planGradient: {
-    padding: 24,
-  },
-  planName: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 8,
-  },
-  priceContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  planPrice: {
-    fontSize: 40,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  planPeriod: {
-    fontSize: 16,
-    color: '#E2E8F0',
-    marginLeft: 4,
-  },
-  planFeatures: {
-    padding: 24,
-    gap: 12,
-  },
-  planFeature: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  planFeatureText: {
-    fontSize: 14,
-    color: '#CBD5E1',
-    flex: 1,
-  },
-  selectPlanButton: {
-    marginHorizontal: 24,
-    marginBottom: 24,
     paddingVertical: 14,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#3B82F6',
-    alignItems: 'center',
   },
-  popularButton: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
-  },
-  selectPlanText: {
+  trialButtonText: {
+    color: Colors.textPrimary,
     fontSize: 16,
     fontWeight: '600',
-    color: '#3B82F6',
   },
-  popularButtonText: {
-    color: '#FFFFFF',
+  guestSection: {
+    paddingHorizontal: 20,
+    marginBottom: 40,
+  },
+  guestCard: {
+    backgroundColor: Colors.cardBackground,
+    borderRadius: 20,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: Colors.warning + '40',
+  },
+  guestHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  guestTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  guestDescription: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    lineHeight: 22,
+    marginBottom: 16,
+  },
+  guestPricing: {
+    backgroundColor: Colors.warningAlpha,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: Colors.warning + '30',
+  },
+  guestPrice: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.warning,
+    textAlign: 'center',
+  },
+  guestButton: {
+    backgroundColor: Colors.warning,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  guestButtonText: {
+    color: Colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '600',
   },
   footer: {
     paddingHorizontal: 20,
     paddingTop: 20,
     borderTopWidth: 1,
-    borderTopColor: '#334155',
+    borderTopColor: Colors.cardBorder,
     alignItems: 'center',
   },
   footerText: {
     fontSize: 14,
-    color: '#64748B',
+    color: Colors.textMuted,
   },
 });

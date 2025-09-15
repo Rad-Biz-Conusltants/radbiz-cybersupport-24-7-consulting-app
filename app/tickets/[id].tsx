@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, Calendar, AlertTriangle, MapPin, Clock, CheckCircle, Ticket, User, MessageSquare, Send, Paperclip } from 'lucide-react-native';
+import { ArrowLeft, Calendar, AlertTriangle, MapPin, Clock, CheckCircle, Ticket, User, Send, Paperclip } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
+import { useTickets } from '@/providers/tickets-provider';
 
 interface TicketMessage {
   id: string;
@@ -16,70 +17,76 @@ interface TicketMessage {
   attachments?: string[];
 }
 
-interface TicketDetails {
-  id: string;
-  title: string;
-  description: string;
-  status: 'open' | 'pending' | 'closed';
-  priority: 'low' | 'medium' | 'high';
-  created: string;
-  updated: string;
-  ip?: string;
-  assignedTo?: string;
-  category: string;
-  messages: TicketMessage[];
-}
-
 export default function TicketDetailScreen() {
   const { id } = useLocalSearchParams();
   const { user } = useAuth();
+  const { getTicketById, updateTicketStatus } = useTickets();
   const insets = useSafeAreaInsets();
   const [newMessage, setNewMessage] = useState('');
   const isBusinessAccount = user?.planType === 'business';
+  
+  const ticket = getTicketById(id as string);
 
-  // Mock ticket data - in real app, fetch based on ID
-  const ticket: TicketDetails = {
-    id: id as string || 'T001',
-    title: 'Email server configuration',
-    description: 'Need help configuring the new email server for our domain. Getting authentication errors when trying to connect Outlook clients.',
-    status: 'open',
-    priority: 'high',
-    created: '2 hours ago',
-    updated: '1 hour ago',
-    ip: '192.168.1.45',
-    assignedTo: 'John Smith',
-    category: 'IT Support',
-    messages: [
-      {
-        id: '1',
-        sender: 'Demo Client',
-        senderType: 'client',
-        message: 'Hi, I\'m having trouble setting up our new email server. When I try to configure Outlook, I get authentication errors.',
-        timestamp: '2 hours ago'
-      },
-      {
-        id: '2',
-        sender: 'John Smith',
-        senderType: 'tech',
-        message: 'Hello! I\'ll help you with this. Can you please share the exact error message you\'re seeing? Also, what email server software are you using?',
-        timestamp: '1 hour 45 minutes ago'
-      },
-      {
-        id: '3',
-        sender: 'Demo Client',
-        senderType: 'client',
-        message: 'The error says "The server you are trying to connect to is using a security certificate that cannot be verified." We\'re using Exchange Server 2019.',
-        timestamp: '1 hour 30 minutes ago'
-      },
-      {
-        id: '4',
-        sender: 'John Smith',
-        senderType: 'tech',
-        message: 'Thanks for the details. This is likely a certificate issue. I\'ll need to check your SSL certificate configuration. Can you give me remote access to the server?',
-        timestamp: '1 hour ago'
-      }
-    ]
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 60) {
+      return `${diffInMinutes} minutes ago`;
+    } else if (diffInMinutes < 1440) {
+      const hours = Math.floor(diffInMinutes / 60);
+      return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    } else {
+      const days = Math.floor(diffInMinutes / 1440);
+      return `${days} day${days > 1 ? 's' : ''} ago`;
+    }
   };
+
+  const getCategoryName = (supportType: string) => {
+    return supportType === 'it' ? 'IT Support' : 'Cybersecurity';
+  };
+
+  // Mock messages for demo - in real app, these would come from the ticket
+  const mockMessages: TicketMessage[] = ticket ? [
+    {
+      id: '1',
+      sender: user?.name || 'Demo Client',
+      senderType: 'client',
+      message: ticket.description,
+      timestamp: ticket.createdAt
+    },
+    {
+      id: '2',
+      sender: ticket.assignedTo || 'Support Tech',
+      senderType: 'tech',
+      message: 'Hello! I\'ve received your ticket and will start working on this issue. I\'ll keep you updated on the progress.',
+      timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString() // 30 minutes ago
+    }
+  ] : [];
+
+  if (!ticket) {
+    return (
+      <LinearGradient
+        colors={[Colors.backgroundStart, Colors.backgroundEnd]}
+        style={styles.container}
+      >
+        <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <ArrowLeft size={24} color={Colors.textPrimary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Ticket Not Found</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Ticket not found</Text>
+        </View>
+      </LinearGradient>
+    );
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -121,7 +128,17 @@ export default function TicketDetailScreen() {
       'What would you like to do with this ticket?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Mark as Resolved', onPress: () => Alert.alert('Success', 'Ticket marked as resolved') },
+        { 
+          text: 'Mark as Resolved', 
+          onPress: async () => {
+            try {
+              await updateTicketStatus(ticket.id, 'closed');
+              Alert.alert('Success', 'Ticket marked as resolved');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to update ticket status');
+            }
+          }
+        },
         { text: 'Request Update', onPress: () => Alert.alert('Success', 'Update requested from support team') }
       ]
     );
@@ -172,9 +189,9 @@ export default function TicketDetailScreen() {
               </View>
               
               <View style={styles.categoryRow}>
-                <View style={[styles.categoryBadge, { backgroundColor: Colors.accentAlpha }]}>
-                  <Text style={[styles.categoryText, { color: Colors.accent }]}>
-                    {ticket.category}
+                <View style={[styles.categoryBadge, { backgroundColor: ticket.supportType === 'it' ? Colors.accentAlpha : Colors.primaryAlpha }]}>
+                  <Text style={[styles.categoryText, { color: ticket.supportType === 'it' ? Colors.accent : Colors.primary }]}>
+                    {getCategoryName(ticket.supportType)}
                   </Text>
                 </View>
                 <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(ticket.priority) + '20' }]}>
@@ -192,28 +209,28 @@ export default function TicketDetailScreen() {
               <View style={styles.metaRow}>
                 <View style={styles.metaItem}>
                   <Calendar size={14} color={Colors.textMuted} />
-                  <Text style={styles.metaText}>Created {ticket.created}</Text>
+                  <Text style={styles.metaText}>Created {formatTimeAgo(ticket.createdAt)}</Text>
                 </View>
                 <View style={styles.metaItem}>
                   <Clock size={14} color={Colors.textMuted} />
-                  <Text style={styles.metaText}>Updated {ticket.updated}</Text>
+                  <Text style={styles.metaText}>Updated {formatTimeAgo(ticket.updatedAt)}</Text>
                 </View>
               </View>
               
-              {isBusinessAccount && ticket.ip && (
-                <View style={styles.metaRow}>
+              <View style={styles.metaRow}>
+                {isBusinessAccount && (
                   <View style={styles.metaItem}>
                     <MapPin size={14} color={Colors.textMuted} />
-                    <Text style={styles.metaText}>IP: {ticket.ip}</Text>
+                    <Text style={styles.metaText}>IP: 192.168.1.{Math.floor(Math.random() * 255)}</Text>
                   </View>
-                  {ticket.assignedTo && (
-                    <View style={styles.metaItem}>
-                      <User size={14} color={Colors.accent} />
-                      <Text style={[styles.metaText, { color: Colors.accent }]}>Assigned to {ticket.assignedTo}</Text>
-                    </View>
-                  )}
-                </View>
-              )}
+                )}
+                {ticket.assignedTo && (
+                  <View style={styles.metaItem}>
+                    <User size={14} color={Colors.accent} />
+                    <Text style={[styles.metaText, { color: Colors.accent }]}>Assigned to {ticket.assignedTo}</Text>
+                  </View>
+                )}
+              </View>
             </View>
           </LinearGradient>
         </View>
@@ -222,7 +239,7 @@ export default function TicketDetailScreen() {
         <View style={styles.messagesSection}>
           <Text style={styles.sectionTitle}>Conversation</Text>
           
-          {ticket.messages.map((message) => (
+          {mockMessages.map((message) => (
             <View key={message.id} style={[
               styles.messageCard,
               message.senderType === 'client' ? styles.clientMessage : styles.techMessage
@@ -255,7 +272,7 @@ export default function TicketDetailScreen() {
                       </Text>
                     </View>
                   </View>
-                  <Text style={styles.messageTime}>{message.timestamp}</Text>
+                  <Text style={styles.messageTime}>{formatTimeAgo(message.timestamp)}</Text>
                 </View>
                 <Text style={styles.messageText}>{message.message}</Text>
               </LinearGradient>
@@ -519,5 +536,19 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     borderRadius: 8,
     marginLeft: 8,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    fontSize: 18,
+    color: Colors.textPrimary,
+    textAlign: 'center',
+  },
+  headerSpacer: {
+    width: 40,
   },
 });

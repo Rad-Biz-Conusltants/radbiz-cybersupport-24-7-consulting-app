@@ -1,96 +1,44 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, Search, Filter, Calendar, AlertTriangle, MapPin, Clock, CheckCircle, Ticket } from 'lucide-react-native';
+import { ArrowLeft, Search, Calendar, AlertTriangle, MapPin, Clock, CheckCircle, Ticket } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
+import { useTickets } from '@/providers/tickets-provider';
 
-interface TicketItem {
-  id: string;
-  title: string;
-  description: string;
-  status: 'open' | 'pending' | 'closed';
-  priority: 'low' | 'medium' | 'high';
-  created: string;
-  updated: string;
-  ip?: string;
-  assignedTo?: string;
-  category: string;
-}
+
 
 export default function AllTicketsScreen() {
   const { user } = useAuth();
+  const { tickets, isLoading } = useTickets();
   const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'open' | 'pending' | 'closed'>('all');
   const isBusinessAccount = user?.planType === 'business';
 
-  const allTickets: TicketItem[] = [
-    {
-      id: 'T001',
-      title: 'Email server configuration',
-      description: 'Need help configuring the new email server for our domain. Getting authentication errors.',
-      status: 'open',
-      priority: 'high',
-      created: '2 hours ago',
-      updated: '1 hour ago',
-      ip: '192.168.1.45',
-      assignedTo: 'John Smith',
-      category: 'IT Support'
-    },
-    {
-      id: 'T002',
-      title: 'Firewall rule update',
-      description: 'Request to update firewall rules to allow new application traffic on port 8080.',
-      status: 'pending',
-      priority: 'medium',
-      created: '1 day ago',
-      updated: '6 hours ago',
-      ip: '192.168.1.23',
-      assignedTo: 'Sarah Johnson',
-      category: 'Cybersecurity'
-    },
-    {
-      id: 'T003',
-      title: 'Software installation',
-      description: 'Install and configure Adobe Creative Suite on 5 workstations.',
-      status: 'closed',
-      priority: 'low',
-      created: '3 days ago',
-      updated: '2 days ago',
-      ip: '192.168.1.67',
-      assignedTo: 'Mike Davis',
-      category: 'IT Support'
-    },
-    {
-      id: 'T004',
-      title: 'Security audit findings',
-      description: 'Review and address security vulnerabilities found in recent audit.',
-      status: 'open',
-      priority: 'high',
-      created: '4 days ago',
-      updated: '3 hours ago',
-      ip: '192.168.1.89',
-      assignedTo: 'Alex Wilson',
-      category: 'Cybersecurity'
-    },
-    {
-      id: 'T005',
-      title: 'Network printer setup',
-      description: 'Configure new network printer for accounting department.',
-      status: 'pending',
-      priority: 'low',
-      created: '5 days ago',
-      updated: '1 day ago',
-      ip: '192.168.1.12',
-      assignedTo: 'John Smith',
-      category: 'IT Support'
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 60) {
+      return `${diffInMinutes} minutes ago`;
+    } else if (diffInMinutes < 1440) {
+      const hours = Math.floor(diffInMinutes / 60);
+      return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    } else {
+      const days = Math.floor(diffInMinutes / 1440);
+      return `${days} day${days > 1 ? 's' : ''} ago`;
     }
-  ];
+  };
 
-  const filteredTickets = allTickets.filter(ticket => {
+  const getCategoryName = (supportType: string) => {
+    return supportType === 'it' ? 'IT Support' : 'Cybersecurity';
+  };
+
+  const filteredTickets = tickets.filter(ticket => {
     const matchesSearch = ticket.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          ticket.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          ticket.id.toLowerCase().includes(searchQuery.toLowerCase());
@@ -200,9 +148,9 @@ export default function AllTicketsScreen() {
                   <View style={styles.ticketInfo}>
                     <View style={styles.ticketIdRow}>
                       <Text style={styles.ticketId}>#{ticket.id}</Text>
-                      <View style={[styles.categoryBadge, { backgroundColor: Colors.accentAlpha }]}>
-                        <Text style={[styles.categoryText, { color: Colors.accent }]}>
-                          {ticket.category}
+                      <View style={[styles.categoryBadge, { backgroundColor: ticket.supportType === 'it' ? Colors.accentAlpha : Colors.primaryAlpha }]}>
+                        <Text style={[styles.categoryText, { color: ticket.supportType === 'it' ? Colors.accent : Colors.primary }]}>
+                          {getCategoryName(ticket.supportType)}
                         </Text>
                       </View>
                     </View>
@@ -224,11 +172,11 @@ export default function AllTicketsScreen() {
                 <View style={styles.ticketDetails}>
                   <View style={styles.ticketDetailItem}>
                     <Calendar size={14} color={Colors.textMuted} />
-                    <Text style={styles.ticketDetailText}>Created {ticket.created}</Text>
+                    <Text style={styles.ticketDetailText}>Created {formatTimeAgo(ticket.createdAt)}</Text>
                   </View>
                   <View style={styles.ticketDetailItem}>
                     <Clock size={14} color={Colors.textMuted} />
-                    <Text style={styles.ticketDetailText}>Updated {ticket.updated}</Text>
+                    <Text style={styles.ticketDetailText}>Updated {formatTimeAgo(ticket.updatedAt)}</Text>
                   </View>
                   <View style={styles.ticketDetailItem}>
                     <AlertTriangle size={14} color={getPriorityColor(ticket.priority)} />
@@ -236,10 +184,10 @@ export default function AllTicketsScreen() {
                       {ticket.priority.toUpperCase()} Priority
                     </Text>
                   </View>
-                  {isBusinessAccount && ticket.ip && (
+                  {isBusinessAccount && (
                     <View style={styles.ticketDetailItem}>
                       <MapPin size={14} color={Colors.textMuted} />
-                      <Text style={styles.ticketDetailText}>{ticket.ip}</Text>
+                      <Text style={styles.ticketDetailText}>192.168.1.{Math.floor(Math.random() * 255)}</Text>
                     </View>
                   )}
                 </View>
@@ -255,15 +203,19 @@ export default function AllTicketsScreen() {
           );
         })}
         
-        {filteredTickets.length === 0 && (
+        {isLoading ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateTitle}>Loading tickets...</Text>
+          </View>
+        ) : filteredTickets.length === 0 ? (
           <View style={styles.emptyState}>
             <Ticket size={48} color={Colors.textMuted} />
             <Text style={styles.emptyStateTitle}>No tickets found</Text>
             <Text style={styles.emptyStateText}>
-              {searchQuery ? 'Try adjusting your search terms' : 'No tickets match the selected filter'}
+              {searchQuery ? 'Try adjusting your search terms' : tickets.length === 0 ? 'No tickets created yet' : 'No tickets match the selected filter'}
             </Text>
           </View>
-        )}
+        ) : null}
       </ScrollView>
     </LinearGradient>
   );

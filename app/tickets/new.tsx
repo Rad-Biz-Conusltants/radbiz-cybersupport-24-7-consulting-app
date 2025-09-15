@@ -108,7 +108,24 @@ export default function NewTicketScreen() {
     } catch (error) {
       setIsSubmitting(false);
       console.error('Failed to create ticket:', error);
-      Alert.alert('Error', 'Failed to create ticket. Please try again.');
+      
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create ticket. Please try again.';
+      
+      if (errorMessage.includes('Insufficient ticket balance')) {
+        Alert.alert(
+          'Insufficient Ticket Balance',
+          'You don\'t have enough tickets remaining. Would you like to add more credits?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Add Credits', 
+              onPress: () => router.push('/credits/add')
+            }
+          ]
+        );
+      } else {
+        Alert.alert('Error', errorMessage);
+      }
     }
   };
 

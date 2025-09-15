@@ -31,10 +31,11 @@ export interface TicketStats {
   pending: number;
   total: number;
   monthlyTotal: number;
+  yearlyTotal: number;
 }
 
 export interface AccountBalance {
-  balance: number;
+  ticketBalance: number;
   usedTickets: number;
   totalTickets: number;
 }
@@ -59,7 +60,7 @@ const STORAGE_KEYS = {
 };
 
 const DEFAULT_BALANCE: AccountBalance = {
-  balance: 850,
+  ticketBalance: 100,
   usedTickets: 0,
   totalTickets: 100
 };
@@ -137,6 +138,11 @@ export const [TicketsProvider, useTickets] = createContextHook<TicketsContextTyp
   }, []);
 
   const createTicket = useCallback(async (ticketData: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt' | 'status'>): Promise<Ticket> => {
+    // Check if user has enough ticket balance before creating
+    if (accountBalance.ticketBalance <= 0) {
+      throw new Error('Insufficient ticket balance. Please add more credits.');
+    }
+    
     const now = new Date().toISOString();
     const ticketId = 'TKT-' + Date.now().toString().slice(-6) + Math.random().toString(36).substr(2, 3).toUpperCase();
     
@@ -156,9 +162,10 @@ export const [TicketsProvider, useTickets] = createContextHook<TicketsContextTyp
     const updatedTickets = [...tickets, newTicket];
     await saveTickets(updatedTickets);
     
-    // Update account balance - deduct one ticket
+    // Update account balance - deduct one ticket from balance and add to used
     const newBalance = {
       ...accountBalance,
+      ticketBalance: accountBalance.ticketBalance - 1,
       usedTickets: accountBalance.usedTickets + 1
     };
     await saveAccountBalance(newBalance);
@@ -191,14 +198,14 @@ export const [TicketsProvider, useTickets] = createContextHook<TicketsContextTyp
     return tickets.filter(ticket => ticket.status === status);
   }, [tickets]);
 
-  const addCredits = useCallback(async (amount: number) => {
+  const addCredits = useCallback(async (ticketCount: number) => {
     const newBalance = {
       ...accountBalance,
-      balance: accountBalance.balance + amount,
-      totalTickets: accountBalance.totalTickets + Math.floor(amount / 10) // $10 per ticket
+      ticketBalance: accountBalance.ticketBalance + ticketCount,
+      totalTickets: accountBalance.totalTickets + ticketCount
     };
     await saveAccountBalance(newBalance);
-    console.log(`Added $${amount} credits, ${Math.floor(amount / 10)} tickets`);
+    console.log(`Added ${ticketCount} tickets to balance`);
   }, [accountBalance, saveAccountBalance]);
 
   const refreshStats = useCallback(() => {
@@ -216,12 +223,18 @@ export const [TicketsProvider, useTickets] = createContextHook<TicketsContextTyp
       return ticketDate.getMonth() === currentMonth && ticketDate.getFullYear() === currentYear;
     });
     
+    const yearlyTickets = tickets.filter(ticket => {
+      const ticketDate = new Date(ticket.createdAt);
+      return ticketDate.getFullYear() === currentYear;
+    });
+    
     return {
       open: tickets.filter(t => t.status === 'open').length,
       closed: tickets.filter(t => t.status === 'closed').length,
       pending: tickets.filter(t => t.status === 'pending').length,
       total: tickets.length,
-      monthlyTotal: monthlyTickets.length
+      monthlyTotal: monthlyTickets.length,
+      yearlyTotal: yearlyTickets.length
     };
   }, [tickets]);
 

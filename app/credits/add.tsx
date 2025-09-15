@@ -81,12 +81,13 @@ export default function AddCreditsScreen() {
               // Simulate payment processing
               await new Promise(resolve => setTimeout(resolve, 2000));
               
-              // Add credits to account
-              await addCredits(pkg.price);
+              // Add tickets to account
+              const totalTickets = pkg.credits + (pkg.bonus || 0);
+              await addCredits(totalTickets);
               
               Alert.alert(
                 'Purchase Successful',
-                `${pkg.price} has been added to your account. You now have ${pkg.credits}${pkg.bonus ? ` + ${pkg.bonus} bonus` : ''} additional support tickets.`,
+                `${pkg.credits}${pkg.bonus ? ` + ${pkg.bonus} bonus` : ''} tickets have been added to your account.`,
                 [{ text: 'OK', onPress: () => router.back() }]
               );
             } catch (error) {
@@ -130,8 +131,8 @@ export default function AddCreditsScreen() {
                 <DollarSign size={24} color={Colors.primary} />
               </View>
               <View style={styles.balanceInfo}>
-                <Text style={styles.balanceLabel}>Current Balance</Text>
-                <Text style={styles.balanceValue}>${accountBalance.balance}</Text>
+                <Text style={styles.balanceLabel}>Account Ticket Balance</Text>
+                <Text style={styles.balanceValue}>{accountBalance.ticketBalance}</Text>
               </View>
             </View>
             <View style={styles.balanceDetails}>

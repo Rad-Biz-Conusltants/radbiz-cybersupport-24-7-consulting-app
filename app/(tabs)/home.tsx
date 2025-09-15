@@ -15,7 +15,7 @@ function ClientDashboard() {
   const isBusinessAccount = user?.planType === 'business';
 
   const businessStats = {
-    balance: accountBalance.balance,
+    ticketBalance: accountBalance.ticketBalance,
     usedTickets: accountBalance.usedTickets,
     totalTickets: accountBalance.totalTickets,
     authorizedUsers: 8,
@@ -144,7 +144,7 @@ function ClientDashboard() {
               <AlertTriangle size={20} color={Colors.accent} />
             </View>
             <Text style={styles.statValue}>{ticketStats.monthlyTotal}</Text>
-            <Text style={styles.statLabel}>Monthly Total</Text>
+            <Text style={styles.statLabel}>Monthly Total {new Date().getFullYear()}</Text>
           </TouchableOpacity>
         </View>
 
@@ -153,7 +153,7 @@ function ClientDashboard() {
           <View style={styles.businessSection}>
             <Text style={styles.sectionTitle}>Business Dashboard</Text>
             
-            {/* Balance & Usage */}
+            {/* Account Ticket Balance */}
             <View style={styles.businessCard}>
               <LinearGradient
                 colors={[Colors.cardBackground, '#2A2A2A']}
@@ -161,11 +161,11 @@ function ClientDashboard() {
               >
                 <View style={styles.businessHeader}>
                   <View style={[styles.businessIcon, { backgroundColor: Colors.primaryAlpha }]}>
-                    <DollarSign size={24} color={Colors.primary} />
+                    <Ticket size={24} color={Colors.primary} />
                   </View>
                   <View style={styles.businessInfo}>
-                    <Text style={styles.businessTitle}>Account Balance</Text>
-                    <Text style={styles.businessValue}>${businessStats.balance}</Text>
+                    <Text style={styles.businessTitle}>Account Ticket Balance</Text>
+                    <Text style={styles.businessValue}>{businessStats.ticketBalance}</Text>
                   </View>
                   <TouchableOpacity 
                     style={styles.addCreditsButton}

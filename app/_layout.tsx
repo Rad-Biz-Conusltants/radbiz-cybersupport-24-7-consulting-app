@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider } from "@/providers/auth-provider";
 import { SubscriptionProvider } from "@/providers/subscription-provider";
 import { TicketsProvider } from "@/providers/tickets-provider";
+import { UsersProvider } from "@/providers/users-provider";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -48,7 +49,9 @@ export default function RootLayout() {
         <AuthProvider>
           <SubscriptionProvider>
             <TicketsProvider>
-              <RootLayoutNav />
+              <UsersProvider>
+                <RootLayoutNav />
+              </UsersProvider>
             </TicketsProvider>
           </SubscriptionProvider>
         </AuthProvider>

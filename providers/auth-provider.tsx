@@ -6,14 +6,14 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 import { getFirestore, doc, setDoc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Platform } from 'react-native';
 
-// Firebase configuration
+// Firebase configuration - Replace with your actual Firebase project credentials
 const firebaseConfig = {
-  apiKey: "demo-api-key",
-  authDomain: "radbiz-support.firebaseapp.com",
-  projectId: "radbiz-support",
-  storageBucket: "radbiz-support.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef123456"
+  apiKey: "YOUR_ACTUAL_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID"
 };
 
 // Initialize Firebase

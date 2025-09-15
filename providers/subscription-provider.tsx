@@ -5,14 +5,26 @@ import createContextHook from '@nkzw/create-context-hook';
 interface Subscription {
   plan: 'individual' | 'business';
   billingCycle: 'monthly' | 'yearly';
-  status: 'active' | 'inactive' | 'trial';
+  status: 'active' | 'inactive' | 'trial' | 'expired';
   nextBillingDate: string;
+  trialEndDate?: string;
+  subscriptionId?: string;
+  customerId?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface SubscriptionContextType {
   subscription: Subscription | null;
   setSubscription: (subscription: Subscription) => Promise<void>;
   cancelSubscription: () => Promise<void>;
+  createSubscription: (plan: 'individual' | 'business', billingCycle: 'monthly' | 'yearly') => Promise<string>;
+  getSubscriptionStatus: () => {
+    isActive: boolean;
+    isOnTrial: boolean;
+    daysUntilExpiry: number;
+    displayStatus: string;
+  };
 }
 
 export const [SubscriptionProvider, useSubscription] = createContextHook<SubscriptionContextType>(() => {
@@ -44,9 +56,75 @@ export const [SubscriptionProvider, useSubscription] = createContextHook<Subscri
     await AsyncStorage.removeItem('subscription');
   }, []);
 
+  const createSubscription = useCallback(async (plan: 'individual' | 'business', billingCycle: 'monthly' | 'yearly') => {
+    try {
+      const response = await fetch('https://toolkit.rork.com/stripe/create-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          plan,
+          billingCycle,
+          returnUrl: 'radbiz://subscription/success',
+          cancelUrl: 'radbiz://subscription/cancel'
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.checkoutUrl) {
+        return data.checkoutUrl;
+      } else {
+        throw new Error(data.error || 'Failed to create subscription');
+      }
+    } catch (error) {
+      console.error('Subscription creation error:', error);
+      throw error;
+    }
+  }, []);
+
+  const getSubscriptionStatus = useCallback(() => {
+    if (!subscription) {
+      return {
+        isActive: false,
+        isOnTrial: false,
+        daysUntilExpiry: 0,
+        displayStatus: 'No Subscription'
+      };
+    }
+
+    const now = new Date();
+    const nextBilling = new Date(subscription.nextBillingDate);
+    const daysUntilExpiry = Math.ceil((nextBilling.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    const isOnTrial = subscription.status === 'trial';
+    const isActive = subscription.status === 'active' || isOnTrial;
+
+    let displayStatus = 'Inactive';
+    if (isOnTrial) {
+      displayStatus = `Trial (${daysUntilExpiry} days left)`;
+    } else if (isActive) {
+      const planName = subscription.plan === 'business' ? 'Business' : 'Individual';
+      const cycle = subscription.billingCycle === 'yearly' ? 'Yearly' : 'Monthly';
+      displayStatus = `${planName} ${cycle}`;
+    } else if (subscription.status === 'expired') {
+      displayStatus = 'Expired';
+    }
+
+    return {
+      isActive,
+      isOnTrial,
+      daysUntilExpiry,
+      displayStatus
+    };
+  }, [subscription]);
+
   return useMemo(() => ({
     subscription,
     setSubscription,
     cancelSubscription,
-  }), [subscription, setSubscription, cancelSubscription]);
+    createSubscription,
+    getSubscriptionStatus,
+  }), [subscription, setSubscription, cancelSubscription, createSubscription, getSubscriptionStatus]);
 });

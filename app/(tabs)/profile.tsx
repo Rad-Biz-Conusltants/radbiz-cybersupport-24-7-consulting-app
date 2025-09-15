@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Mail, Building, Shield, LogOut, Edit3, Bell, CreditCard, HelpCircle } from 'lucide-react-native';
+import { User, Mail, Building, Shield, LogOut, Edit3, Bell, CreditCard, HelpCircle, Calendar, Crown } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
+import { useSubscription } from '@/providers/subscription-provider';
+import { useTickets } from '@/providers/tickets-provider';
 
 interface ProfileOption {
   id: string;
@@ -18,8 +20,12 @@ interface ProfileOption {
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
+  const { subscription, getSubscriptionStatus } = useSubscription();
+  const { accountBalance } = useTickets();
   const insets = useSafeAreaInsets();
   const [isLoading, setIsLoading] = useState(false);
+  
+  const subscriptionStatus = getSubscriptionStatus();
 
   const handleSignOut = async () => {
     Alert.alert(
@@ -163,31 +169,76 @@ export default function ProfileScreen() {
           </LinearGradient>
         </View>
 
+        {/* Subscription Status */}
+        <View style={styles.subscriptionSection}>
+          <Text style={styles.sectionTitle}>Subscription Status</Text>
+          <View style={styles.subscriptionCard}>
+            <LinearGradient
+              colors={subscriptionStatus.isActive 
+                ? [Colors.primaryAlpha, Colors.cardBackground]
+                : [Colors.cardBackground, '#2A2A2A']
+              }
+              style={styles.subscriptionGradient}
+            >
+              <View style={styles.subscriptionHeader}>
+                <View style={[styles.subscriptionIcon, { 
+                  backgroundColor: subscriptionStatus.isActive ? Colors.primaryAlpha : Colors.cardBorder 
+                }]}>
+                  <Crown size={24} color={subscriptionStatus.isActive ? Colors.primary : Colors.textMuted} />
+                </View>
+                <View style={styles.subscriptionInfo}>
+                  <Text style={styles.subscriptionStatus}>{subscriptionStatus.displayStatus}</Text>
+                  {subscription && (
+                    <View style={styles.subscriptionDetails}>
+                      <Calendar size={12} color={Colors.textMuted} />
+                      <Text style={styles.subscriptionDate}>
+                        {subscriptionStatus.isOnTrial 
+                          ? `Trial ends ${subscription.trialEndDate ? new Date(subscription.trialEndDate).toLocaleDateString() : 'soon'}`
+                          : `Next billing: ${new Date(subscription.nextBillingDate).toLocaleDateString()}`
+                        }
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+              
+              {!subscriptionStatus.isActive && (
+                <TouchableOpacity 
+                  style={styles.upgradeButton}
+                  onPress={() => Alert.alert('Upgrade', 'Subscription upgrade coming soon')}
+                >
+                  <Text style={styles.upgradeButtonText}>Upgrade Plan</Text>
+                </TouchableOpacity>
+              )}
+            </LinearGradient>
+          </View>
+        </View>
+
         {/* Account Stats */}
-        {user.planType === 'business' && (
-          <View style={styles.statsSection}>
-            <Text style={styles.sectionTitle}>Account Overview</Text>
-            <View style={styles.statsGrid}>
-              <View style={styles.statCard}>
-                <LinearGradient
-                  colors={[Colors.cardBackground, '#2A2A2A']}
-                  style={styles.statGradient}
-                >
-                  <Text style={styles.statValue}>15</Text>
-                  <Text style={styles.statLabel}>Tickets Used</Text>
-                </LinearGradient>
-              </View>
-              
-              <View style={styles.statCard}>
-                <LinearGradient
-                  colors={[Colors.cardBackground, '#2A2A2A']}
-                  style={styles.statGradient}
-                >
-                  <Text style={styles.statValue}>$850</Text>
-                  <Text style={styles.statLabel}>Credit Balance</Text>
-                </LinearGradient>
-              </View>
-              
+        <View style={styles.statsSection}>
+          <Text style={styles.sectionTitle}>Account Overview</Text>
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}>
+              <LinearGradient
+                colors={[Colors.cardBackground, '#2A2A2A']}
+                style={styles.statGradient}
+              >
+                <Text style={styles.statValue}>{accountBalance.usedTickets}</Text>
+                <Text style={styles.statLabel}>Tickets Used</Text>
+              </LinearGradient>
+            </View>
+            
+            <View style={styles.statCard}>
+              <LinearGradient
+                colors={[Colors.cardBackground, '#2A2A2A']}
+                style={styles.statGradient}
+              >
+                <Text style={styles.statValue}>{accountBalance.ticketBalance}</Text>
+                <Text style={styles.statLabel}>Ticket Balance</Text>
+              </LinearGradient>
+            </View>
+            
+            {user.planType === 'business' && (
               <View style={styles.statCard}>
                 <LinearGradient
                   colors={[Colors.cardBackground, '#2A2A2A']}
@@ -197,9 +248,9 @@ export default function ProfileScreen() {
                   <Text style={styles.statLabel}>Team Members</Text>
                 </LinearGradient>
               </View>
-            </View>
+            )}
           </View>
-        )}
+        </View>
 
         {/* Profile Options */}
         <View style={styles.optionsSection}>
@@ -340,6 +391,62 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  subscriptionSection: {
+    marginBottom: 24,
+  },
+  subscriptionCard: {
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  subscriptionGradient: {
+    padding: 20,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    borderRadius: 16,
+  },
+  subscriptionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  subscriptionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  subscriptionInfo: {
+    flex: 1,
+  },
+  subscriptionStatus: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  subscriptionDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  subscriptionDate: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    marginLeft: 6,
+  },
+  upgradeButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  upgradeButtonText: {
+    color: Colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '600',
   },
   statsSection: {
     marginBottom: 24,

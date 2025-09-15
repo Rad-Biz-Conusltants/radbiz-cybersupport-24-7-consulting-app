@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, CreditCard, Zap, Star, CheckCircle, Ticket } from 'lucide-react-native';
+import { ArrowLeft, CreditCard, Zap, Star, CheckCircle, Ticket, ExternalLink } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
 import { useTickets } from '@/providers/tickets-provider';
+import { useSubscription } from '@/providers/subscription-provider';
 
 interface CreditPackage {
   id: string;
@@ -59,6 +60,45 @@ export default function AddCreditsScreen() {
     }
   ];
 
+  const createStripeCheckout = async (packageData: CreditPackage) => {
+    try {
+      const response = await fetch('https://toolkit.rork.com/stripe/create-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          packageId: packageData.id,
+          packageName: packageData.name,
+          credits: packageData.credits,
+          bonus: packageData.bonus || 0,
+          price: packageData.price,
+          userId: user?.id,
+          userEmail: user?.email,
+          returnUrl: Platform.select({
+            web: window.location.origin + '/credits/success',
+            default: 'radbiz://credits/success'
+          }),
+          cancelUrl: Platform.select({
+            web: window.location.origin + '/credits/add',
+            default: 'radbiz://credits/add'
+          })
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.checkoutUrl) {
+        return data.checkoutUrl;
+      } else {
+        throw new Error(data.error || 'Failed to create checkout session');
+      }
+    } catch (error) {
+      console.error('Stripe checkout error:', error);
+      throw error;
+    }
+  };
+
   const handlePurchase = async () => {
     if (!selectedPackage) {
       Alert.alert('No Package Selected', 'Please select a credit package to continue.');
@@ -68,37 +108,35 @@ export default function AddCreditsScreen() {
     const pkg = creditPackages.find(p => p.id === selectedPackage);
     if (!pkg) return;
 
-    Alert.alert(
-      'Confirm Purchase',
-      `Purchase ${pkg.name} for ${pkg.price}?\n\nThis will add ${pkg.credits}${pkg.bonus ? ` + ${pkg.bonus} bonus` : ''} tickets to your account.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Purchase',
-          onPress: async () => {
-            setIsProcessing(true);
-            try {
-              // Simulate payment processing
-              await new Promise(resolve => setTimeout(resolve, 2000));
-              
-              // Add tickets to account
-              const totalTickets = pkg.credits + (pkg.bonus || 0);
-              await addCredits(totalTickets);
-              
-              Alert.alert(
-                'Purchase Successful',
-                `${pkg.credits}${pkg.bonus ? ` + ${pkg.bonus} bonus` : ''} tickets have been added to your account.`,
-                [{ text: 'OK', onPress: () => router.back() }]
-              );
-            } catch (error) {
-              Alert.alert('Error', 'Failed to process payment. Please try again.');
-            } finally {
-              setIsProcessing(false);
-            }
-          }
-        }
-      ]
-    );
+    setIsProcessing(true);
+    
+    try {
+      const checkoutUrl = await createStripeCheckout(pkg);
+      
+      // Open Stripe checkout in device browser
+      const canOpen = await Linking.canOpenURL(checkoutUrl);
+      if (canOpen) {
+        await Linking.openURL(checkoutUrl);
+        
+        // Show info about the process
+        Alert.alert(
+          'Redirecting to Payment',
+          'You will be redirected to our secure payment page. After completing your purchase, you will be redirected back to the app.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        throw new Error('Cannot open payment URL');
+      }
+    } catch (error) {
+      console.error('Purchase error:', error);
+      Alert.alert(
+        'Payment Error',
+        'Unable to process payment at this time. Please try again later.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -259,10 +297,14 @@ export default function AddCreditsScreen() {
             colors={[Colors.primary, Colors.primaryDark]}
             style={styles.purchaseGradient}
           >
-            <CreditCard size={20} color={Colors.textPrimary} />
+            {isProcessing ? (
+              <CreditCard size={20} color={Colors.textPrimary} />
+            ) : (
+              <ExternalLink size={20} color={Colors.textPrimary} />
+            )}
             <Text style={styles.purchaseButtonText}>
               {isProcessing 
-                ? 'Processing...'
+                ? 'Opening Payment...'
                 : selectedPackage 
                   ? `Purchase ${creditPackages.find(p => p.id === selectedPackage)?.name}`
                   : 'Select a Package'

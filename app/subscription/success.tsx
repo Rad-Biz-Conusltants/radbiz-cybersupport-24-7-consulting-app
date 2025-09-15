@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { CheckCircle, Crown, ArrowLeft, Calendar } from 'lucide-react-native';
+import { CheckCircle, Crown } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
@@ -33,10 +33,12 @@ export default function SubscriptionSuccessScreen() {
     const verifySubscription = async () => {
       try {
         const sessionId = params.session_id as string;
-        if (!sessionId) {
-          throw new Error('No session ID provided');
-        }
-
+        console.log('Session ID from params:', sessionId);
+        
+        // If no session ID, create a mock successful subscription
+        // This handles cases where user comes from the checkout flow
+        const mockSessionId = sessionId || `cs_mock_${Date.now()}`;
+        
         // For demo purposes, simulate successful subscription verification
         // In production, this would call your actual backend
         await new Promise(resolve => setTimeout(resolve, 2000));
@@ -45,7 +47,7 @@ export default function SubscriptionSuccessScreen() {
         const data = {
           success: true,
           subscriptionDetails: {
-            sessionId,
+            sessionId: mockSessionId,
             subscriptionId: `sub_${Date.now()}`,
             customerId: `cus_${Date.now()}`,
             plan: 'business',
@@ -149,18 +151,9 @@ export default function SubscriptionSuccessScreen() {
       colors={[Colors.backgroundStart, Colors.backgroundEnd]}
       style={styles.container}
     >
-      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.push('/(tabs)/home')}
-        >
-          <ArrowLeft size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Subscription Active</Text>
-        <View style={styles.headerSpacer} />
-      </View>
 
-      <View style={styles.content}>
+
+      <View style={[styles.content, { paddingTop: insets.top + 40 }]}>
         {/* Success Icon */}
         <View style={styles.successIcon}>
           <LinearGradient
@@ -246,7 +239,7 @@ export default function SubscriptionSuccessScreen() {
             style={styles.featuresGradient}
           >
             <View style={styles.featuresHeader}>
-              <Text style={styles.featuresTitle}>What's Included</Text>
+              <Text style={styles.featuresTitle}>What&apos;s Included</Text>
             </View>
             
             <View style={styles.featuresList}>

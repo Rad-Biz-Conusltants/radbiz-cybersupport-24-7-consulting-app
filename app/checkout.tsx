@@ -6,9 +6,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/providers/auth-provider';
 import { useSubscription } from '@/providers/subscription-provider';
-import { createSubscriptionCheckout } from '@/functions/stripe-functions';
-import { doc, setDoc } from 'firebase/firestore';
-import { getFirestore } from 'firebase/firestore';
+
 import Colors from '@/constants/colors';
 
 export default function CheckoutScreen() {
@@ -98,48 +96,24 @@ export default function CheckoutScreen() {
           { text: 'Start Getting Support', onPress: () => router.replace('/(tabs)/support') }
         ]);
       } else {
-        // For subscription plans, start the trial immediately
-        console.log('Starting trial for user:', user.id);
+        // For subscription plans, open Stripe checkout in browser
+        console.log('Opening Stripe checkout for user:', user.id);
         
-        const trialEndDate = new Date();
-        trialEndDate.setDate(trialEndDate.getDate() + 14); // 14-day trial
+        // Create checkout URL with parameters
+        const checkoutUrl = `https://your-domain.com/checkout.html?plan=${selectedPlan}&billing=${billingCycle}&userId=${user.id}&userEmail=${encodeURIComponent(user.email)}`;
         
-        const nextBillingDate = new Date(trialEndDate);
-        if (billingCycle === 'yearly') {
-          nextBillingDate.setFullYear(nextBillingDate.getFullYear() + 1);
+        // Open in device browser to avoid Apple in-app purchase fees
+        const supported = await Linking.canOpenURL(checkoutUrl);
+        if (supported) {
+          await Linking.openURL(checkoutUrl);
+          console.log('Opened checkout in browser');
         } else {
-          nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
+          throw new Error('Cannot open checkout URL');
         }
-        
-        const subscriptionData = {
-          plan: selectedPlan as 'individual' | 'business',
-          billingCycle,
-          status: 'trial' as const,
-          trialEndDate: trialEndDate.toISOString(),
-          nextBillingDate: nextBillingDate.toISOString(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        
-        // Update subscription in context
-        setSubscription(subscriptionData);
-        
-        // Store subscription in Firestore
-        const db = getFirestore();
-        await setDoc(doc(db, 'subscriptions', user.id), {
-          ...subscriptionData,
-          userId: user.id,
-          userEmail: user.email,
-        });
-        
-        console.log('Trial started successfully');
-        
-        // Navigate to success page
-        router.replace('/subscription/success');
       }
     } catch (error) {
       console.error('Checkout error:', error);
-      Alert.alert('Error', 'Failed to start trial. Please try again.');
+      Alert.alert('Error', 'Failed to open checkout. Please try again.');
     } finally {
       setLoading(false);
     }

@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Checkout - RedTint Solutions</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .checkout-container {
+            background: rgba(45, 45, 45, 0.95);
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        
+        .logo h1 {
+            color: #ff4444;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .logo p {
+            color: #888;
+            font-size: 14px;
+        }
+        
+        .checkout-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        
+        .checkout-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .checkout-subtitle {
+            color: #888;
+            font-size: 16px;
+        }
+        
+        .plan-details {
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid rgba(255, 68, 68, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        
+        .plan-name {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .plan-price {
+            font-size: 32px;
+            font-weight: 800;
+            color: #ff4444;
+            margin-bottom: 8px;
+        }
+        
+        .plan-description {
+            color: #888;
+            font-size: 14px;
+        }
+        
+        .trial-notice {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+        
+        .trial-notice strong {
+            color: #ffc107;
+        }
+        
+        #card-element {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        
+        #card-errors {
+            color: #ff4444;
+            font-size: 14px;
+            margin-bottom: 16px;
+            min-height: 20px;
+        }
+        
+        .submit-button {
+            width: 100%;
+            background: linear-gradient(135deg, #ff4444 0%, #cc3333 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 16px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 16px;
+        }
+        
+        .submit-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 68, 68, 0.3);
+        }
+        
+        .submit-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .security-info {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: #888;
+            font-size: 12px;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top: 2px solid #ff4444;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="checkout-container">
+        <div class="logo">
+            <h1>RedTint Solutions</h1>
+            <p>IT & Cybersecurity Support</p>
+        </div>
+        
+        <div class="checkout-header">
+            <h2 class="checkout-title">Complete Your Purchase</h2>
+            <p class="checkout-subtitle">Secure payment powered by Stripe</p>
+        </div>
+        
+        <div class="plan-details">
+            <div class="plan-name" id="plan-name">Loading...</div>
+            <div class="plan-price" id="plan-price">$0</div>
+            <div class="plan-description" id="plan-description">Loading plan details...</div>
+        </div>
+        
+        <div class="trial-notice" id="trial-notice" style="display: none;">
+            <strong>14-Day Free Trial</strong><br>
+            You won't be charged until your trial ends. Cancel anytime.
+        </div>
+        
+        <form id="payment-form">
+            <div id="card-element">
+                <!-- Stripe Elements will create form elements here -->
+            </div>
+            <div id="card-errors" role="alert"></div>
+            <button type="submit" id="submit-button" class="submit-button">
+                Start Free Trial
+            </button>
+        </form>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Processing your payment...</p>
+        </div>
+        
+        <div class="security-info">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,7C13.4,7 14.8,8.6 14.8,10V11H16V18H8V11H9.2V10C9.2,8.6 10.6,7 12,7M12,8.2C11.2,8.2 10.4,8.7 10.4,10V11H13.6V10C13.6,8.7 12.8,8.2 12,8.2Z"/>
+            </svg>
+            <span>Your payment information is secure and encrypted</span>
+        </div>
+    </div>
+    
+    <script>
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const plan = urlParams.get('plan') || 'individual';
+        const billing = urlParams.get('billing') || 'monthly';
+        const userId = urlParams.get('userId');
+        const userEmail = urlParams.get('userEmail');
+        
+        // Plan configurations
+        const plans = {
+            individual: {
+                monthly: { name: 'Individual Monthly', price: '$29.99/month', description: '50 tickets per month, Email support, Basic security tools' },
+                yearly: { name: 'Individual Yearly', price: '$299.99/year', description: '50 tickets per month, Email support, Basic security tools, 2 months free' }
+            },
+            business: {
+                monthly: { name: 'Business Monthly', price: '$99.99/month', description: 'Unlimited tickets, Priority support, Advanced security tools, Team management' },
+                yearly: { name: 'Business Yearly', price: '$999.99/year', description: 'Unlimited tickets, Priority support, Advanced security tools, Team management, 2 months free' }
+            }
+        };
+        
+        // Update plan details
+        const planConfig = plans[plan]?.[billing];
+        if (planConfig) {
+            document.getElementById('plan-name').textContent = planConfig.name;
+            document.getElementById('plan-price').textContent = planConfig.price;
+            document.getElementById('plan-description').textContent = planConfig.description;
+            document.getElementById('trial-notice').style.display = 'block';
+        }
+        
+        // Initialize Stripe
+        const stripe = Stripe('pk_test_51234567890abcdef'); // Replace with your publishable key
+        const elements = stripe.elements({
+            appearance: {
+                theme: 'night',
+                variables: {
+                    colorPrimary: '#ff4444',
+                    colorBackground: 'rgba(255, 255, 255, 0.05)',
+                    colorText: '#ffffff',
+                    colorDanger: '#ff4444',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif',
+                    borderRadius: '8px'
+                }
+            }
+        });
+        
+        const cardElement = elements.create('card');
+        cardElement.mount('#card-element');
+        
+        cardElement.on('change', ({error}) => {
+            const displayError = document.getElementById('card-errors');
+            if (error) {
+                displayError.textContent = error.message;
+            } else {
+                displayError.textContent = '';
+            }
+        });
+        
+        // Handle form submission
+        const form = document.getElementById('payment-form');
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            
+            if (!userId || !userEmail) {
+                document.getElementById('card-errors').textContent = 'Missing user information. Please try again.';
+                return;
+            }
+            
+            const submitButton = document.getElementById('submit-button');
+            const loadingDiv = document.getElementById('loading');
+            
+            submitButton.disabled = true;
+            submitButton.textContent = 'Processing...';
+            
+            try {
+                // Create payment method
+                const {error, paymentMethod} = await stripe.createPaymentMethod({
+                    type: 'card',
+                    card: cardElement,
+                    billing_details: {
+                        email: userEmail,
+                    },
+                });
+                
+                if (error) {
+                    document.getElementById('card-errors').textContent = error.message;
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Start Free Trial';
+                    return;
+                }
+                
+                // Show loading state
+                form.style.display = 'none';
+                loadingDiv.style.display = 'block';
+                
+                // Simulate successful subscription creation
+                setTimeout(() => {
+                    const sessionId = 'cs_mock_' + Date.now();
+                    const returnUrl = `exp://192.168.1.100:8081/--/subscription/success?session_id=${sessionId}`;
+                    
+                    // Redirect back to app
+                    window.location.href = returnUrl;
+                }, 2000);
+                
+            } catch (err) {
+                console.error('Payment error:', err);
+                document.getElementById('card-errors').textContent = 'An unexpected error occurred. Please try again.';
+                submitButton.disabled = false;
+                submitButton.textContent = 'Start Free Trial';
+                form.style.display = 'block';
+                loadingDiv.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

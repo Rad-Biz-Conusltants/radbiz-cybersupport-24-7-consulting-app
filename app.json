@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "CyberSupport 24/7 Consulting App",
+    "name": "Radbiz IT-Cybe Support App",
     "slug": "cybersupport-24-7-consulting-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -15,14 +15,14 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.rork.cybersupport-24-7-consulting-app"
+      "bundleIdentifier": "app.radbiz.cybersupport-24-7-consulting-app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "app.rork.cybersupport-24-7-consulting-app"
+      "package": "app.radbiz.cybersupport-24-7-consulting-app"
     },
     "web": {
       "favicon": "./assets/images/favicon.png"

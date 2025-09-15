@@ -21,6 +21,9 @@ function RootLayoutNav() {
         headerShown: false 
       }} />
       <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="tickets" options={{ headerShown: false }} />
+      <Stack.Screen name="users" options={{ headerShown: false }} />
+      <Stack.Screen name="credits" options={{ headerShown: false }} />
     </Stack>
   );
 }

@@ -1,14 +1,56 @@
-// Firebase Functions for Stripe Integration
-// Deploy this to Firebase Functions
+// Mock Backend Functions for Stripe Integration
+// These are frontend mock implementations for development
 
-import { onRequest } from 'firebase-functions/v2/https';
-import { initializeApp } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-import { logger } from 'firebase-functions';
+type Request = {
+  method: string;
+  body: any;
+};
 
-// Initialize Firebase Admin
-initializeApp();
-const db = getFirestore();
+type Response = {
+  status: (code: number) => Response;
+  json: (data: any) => void;
+};
+
+// Mock database operations
+const mockDb = {
+  collection: (name: string) => ({
+    doc: (id: string) => ({
+      set: async (data: any) => Promise.resolve(),
+      update: async (data: any) => Promise.resolve(),
+      get: async () => ({
+        exists: true,
+        data: () => ({
+          userId: 'mock-user',
+          status: 'pending',
+          type: 'credit_purchase',
+          packageId: 'starter',
+          plan: 'individual',
+          billingCycle: 'monthly',
+          packageData: { credits: 10, bonus: 0, price: 10000, name: 'Starter Pack' },
+          planData: { name: 'Individual Monthly', price: 2999, interval: 'month' }
+        }),
+        ref: {
+          update: async (data: any) => Promise.resolve()
+        }
+      })
+    }),
+    add: async (data: any) => Promise.resolve({ id: 'mock-doc-id' })
+  }),
+  FieldValue: {
+    increment: (value: number) => ({ _increment: value })
+  }
+};
+
+// Mock logger
+const logger = {
+  info: (...args: any[]) => console.log('[INFO]', ...args),
+  error: (...args: any[]) => console.error('[ERROR]', ...args)
+};
+
+// Mock onRequest function
+function onRequest(options: any, handler: (req: Request, res: Response) => Promise<void>) {
+  return handler;
+}
 
 // Credit Package Definitions
 const CREDIT_PACKAGES = {
@@ -71,7 +113,7 @@ const SUBSCRIPTION_PLANS = {
  */
 export const createCreditCheckout = onRequest(
   { cors: true },
-  async (request, response) => {
+  async (request: Request, response: Response) => {
     try {
       if (request.method !== 'POST') {
         response.status(405).json({ error: 'Method not allowed' });
@@ -98,8 +140,8 @@ export const createCreditCheckout = onRequest(
       const mockSessionId = `cs_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const checkoutUrl = `https://checkout.stripe.com/pay/${mockSessionId}`;
 
-      // Store session data in Firestore for later verification
-      await db.collection('checkout_sessions').doc(mockSessionId).set({
+      // Store session data in mock database for later verification
+      await mockDb.collection('checkout_sessions').doc(mockSessionId).set({
         type: 'credit_purchase',
         userId,
         packageId,
@@ -133,7 +175,7 @@ export const createCreditCheckout = onRequest(
  */
 export const createSubscriptionCheckout = onRequest(
   { cors: true },
-  async (request, response) => {
+  async (request: Request, response: Response) => {
     try {
       if (request.method !== 'POST') {
         response.status(405).json({ error: 'Method not allowed' });
@@ -161,8 +203,8 @@ export const createSubscriptionCheckout = onRequest(
       const mockSessionId = `cs_sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const checkoutUrl = `https://checkout.stripe.com/pay/${mockSessionId}`;
 
-      // Store session data in Firestore
-      await db.collection('checkout_sessions').doc(mockSessionId).set({
+      // Store session data in mock database
+      await mockDb.collection('checkout_sessions').doc(mockSessionId).set({
         type: 'subscription',
         userId,
         plan,
@@ -197,7 +239,7 @@ export const createSubscriptionCheckout = onRequest(
  */
 export const verifyPurchase = onRequest(
   { cors: true },
-  async (request, response) => {
+  async (request: Request, response: Response) => {
     try {
       if (request.method !== 'POST') {
         response.status(405).json({ error: 'Method not allowed' });
@@ -211,8 +253,8 @@ export const verifyPurchase = onRequest(
         return;
       }
       
-      // Retrieve the checkout session from Firestore
-      const sessionDoc = await db.collection('checkout_sessions').doc(sessionId).get();
+      // Retrieve the checkout session from mock database
+      const sessionDoc = await mockDb.collection('checkout_sessions').doc(sessionId).get();
       
       if (!sessionDoc.exists) {
         response.status(404).json({ error: 'Session not found' });
@@ -237,11 +279,11 @@ export const verifyPurchase = onRequest(
         const bonus = packageData.bonus || 0;
         const totalCredits = credits + bonus;
         
-        // Update user's credit balance in Firestore
-        const userRef = db.collection('users').doc(userId);
-        await userRef.update({
-          'accountBalance.ticketBalance': db.FieldValue.increment(totalCredits),
-          'accountBalance.totalTickets': db.FieldValue.increment(totalCredits),
+        // Update user's credit balance in mock database
+        const userDoc = mockDb.collection('users').doc(userId);
+        await userDoc.update({
+          'accountBalance.ticketBalance': mockDb.FieldValue.increment(totalCredits),
+          'accountBalance.totalTickets': mockDb.FieldValue.increment(totalCredits),
           updatedAt: new Date(),
         });
         
@@ -252,7 +294,7 @@ export const verifyPurchase = onRequest(
         });
         
         // Create purchase record
-        await db.collection('purchases').add({
+        await mockDb.collection('purchases').add({
           userId,
           sessionId,
           type: 'credit_purchase',
@@ -308,9 +350,9 @@ export const verifyPurchase = onRequest(
           updatedAt: new Date().toISOString(),
         };
         
-        // Update user's subscription in Firestore
-        const userRef = db.collection('users').doc(userId);
-        await userRef.update({
+        // Update user's subscription in mock database
+        const userDoc = mockDb.collection('users').doc(userId);
+        await userDoc.update({
           subscription: subscriptionData,
           updatedAt: new Date(),
         });
@@ -356,7 +398,7 @@ export const verifyPurchase = onRequest(
  */
 export const stripeWebhook = onRequest(
   { cors: false },
-  async (request, response) => {
+  async (request: Request, response: Response) => {
     try {
       if (request.method !== 'POST') {
         response.status(405).json({ error: 'Method not allowed' });

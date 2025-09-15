@@ -1,12 +1,82 @@
-// Backend Functions for Stripe Integration
-// These functions would be deployed to Firebase Functions or similar serverless platform
+// Mock Backend Functions for Stripe Integration
+// These are frontend mock implementations for development
 
-import Stripe from 'stripe';
+// Mock Stripe types and functions
+type MockStripe = {
+  checkout: {
+    sessions: {
+      create: (params: any) => Promise<{ id: string; url: string }>;
+      retrieve: (id: string, options?: any) => Promise<any>;
+    };
+  };
+  customers: {
+    list: (params: any) => Promise<{ data: any[] }>;
+    create: (params: any) => Promise<{ id: string; email: string }>;
+  };
+  prices: {
+    list: (params: any) => Promise<{ data: any[] }>;
+    create: (params: any) => Promise<{ id: string }>;
+  };
+  products: {
+    create: (params: any) => Promise<{ id: string }>;
+  };
+  subscriptions: {
+    retrieve: (id: string) => Promise<any>;
+  };
+  webhooks: {
+    constructEvent: (body: string, signature: string, secret: string) => any;
+  };
+};
 
-// Initialize Stripe with secret key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
-});
+// Mock Stripe implementation
+const stripe: MockStripe = {
+  checkout: {
+    sessions: {
+      create: async (params) => ({
+        id: `cs_mock_${Date.now()}`,
+        url: `https://checkout.stripe.com/pay/cs_mock_${Date.now()}`
+      }),
+      retrieve: async (id) => ({
+        id,
+        payment_status: 'paid',
+        metadata: { userId: 'mock-user', type: 'credit_purchase', credits: '10', bonus: '0' },
+        amount_total: 10000,
+        created: Math.floor(Date.now() / 1000),
+        subscription: 'sub_mock_123'
+      })
+    }
+  },
+  customers: {
+    list: async () => ({ data: [] }),
+    create: async (params) => ({ id: `cus_mock_${Date.now()}`, email: params.email })
+  },
+  prices: {
+    list: async () => ({ data: [] }),
+    create: async () => ({ id: `price_mock_${Date.now()}` })
+  },
+  products: {
+    create: async () => ({ id: `prod_mock_${Date.now()}` })
+  },
+  subscriptions: {
+    retrieve: async (id) => ({
+      id,
+      customer: 'cus_mock_123',
+      status: 'trialing',
+      trial_end: Math.floor(Date.now() / 1000) + (14 * 24 * 60 * 60),
+      current_period_end: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60),
+      created: Math.floor(Date.now() / 1000),
+      items: {
+        data: [{ price: { unit_amount: 2999 } }]
+      }
+    })
+  },
+  webhooks: {
+    constructEvent: (body, signature, secret) => ({
+      type: 'checkout.session.completed',
+      data: { object: { id: 'cs_mock_123' } }
+    })
+  }
+};
 
 // Credit Package Definitions
 const CREDIT_PACKAGES = {
@@ -355,7 +425,7 @@ export async function handleStripeWebhook(request: {
     
     switch (event.type) {
       case 'checkout.session.completed':
-        const session = event.data.object as Stripe.Checkout.Session;
+        const session = event.data.object as any;
         console.log('Checkout session completed:', session.id);
         
         // Handle successful payment
@@ -378,7 +448,7 @@ export async function handleStripeWebhook(request: {
         break;
         
       case 'customer.subscription.updated':
-        const subscription = event.data.object as Stripe.Subscription;
+        const subscription = event.data.object as any;
         console.log('Subscription updated:', subscription.id);
         
         // Update subscription status in database
@@ -390,7 +460,7 @@ export async function handleStripeWebhook(request: {
         break;
         
       case 'customer.subscription.deleted':
-        const deletedSubscription = event.data.object as Stripe.Subscription;
+        const deletedSubscription = event.data.object as any;
         console.log('Subscription cancelled:', deletedSubscription.id);
         
         // Mark subscription as cancelled in database
@@ -400,7 +470,7 @@ export async function handleStripeWebhook(request: {
         break;
         
       case 'invoice.payment_failed':
-        const invoice = event.data.object as Stripe.Invoice;
+        const invoice = event.data.object as any;
         console.log('Payment failed for subscription:', invoice.subscription);
         
         // Handle failed payment (send notification, etc.)
@@ -422,17 +492,17 @@ export async function handleStripeWebhook(request: {
 
 // Database helper functions (implement based on your database choice)
 async function updateUserCredits(userId: string, credits: number) {
-  // Implementation depends on your database (Firestore, etc.)
+  if (!userId?.trim() || credits < 0) return;
   console.log(`Adding ${credits} credits to user ${userId}`);
 }
 
 async function updateUserSubscription(userId: string, subscriptionData: any) {
-  // Implementation depends on your database (Firestore, etc.)
+  if (!userId?.trim() || !subscriptionData) return;
   console.log(`Updating subscription for user ${userId}:`, subscriptionData);
 }
 
 async function updateSubscriptionStatus(subscriptionId: string, statusData: any) {
-  // Implementation depends on your database (Firestore, etc.)
+  if (!subscriptionId?.trim() || !statusData) return;
   console.log(`Updating subscription ${subscriptionId}:`, statusData);
 }
 

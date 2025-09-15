@@ -12,6 +12,7 @@ export default function SignupScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [company, setCompany] = useState('');
   const [planType, setPlanType] = useState<'individual' | 'business'>('individual');
   const [loading, setLoading] = useState(false);
@@ -44,8 +45,13 @@ export default function SignupScreen() {
   const supportInfo = getSupportTypeInfo();
 
   const handleSignup = async () => {
-    if (!name || !email || !password) {
+    if (!name || !email || !password || !confirmPassword) {
       Alert.alert('Error', 'Please fill in all required fields');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
       return;
     }
 
@@ -167,6 +173,19 @@ export default function SignupScreen() {
                   placeholderTextColor={Colors.textMuted}
                   value={password}
                   onChangeText={setPassword}
+                  secureTextEntry
+                  autoComplete="password-new"
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Lock size={20} color={Colors.textMuted} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Confirm password"
+                  placeholderTextColor={Colors.textMuted}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
                   secureTextEntry
                   autoComplete="password-new"
                 />

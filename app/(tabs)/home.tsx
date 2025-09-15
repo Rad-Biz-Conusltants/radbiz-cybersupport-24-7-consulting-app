@@ -80,13 +80,11 @@ function ClientDashboard() {
       >
         {/* Header */}
         <View style={styles.dashboardHeader}>
-          <View style={styles.logoContainer}>
-            <Image 
-              source={require('@/assets/images/adaptive-icon.png')}
-              style={styles.dashboardLogo}
-              resizeMode="contain"
-            />
-          </View>
+          <Image 
+            source={require('@/assets/images/adaptive-icon.png')}
+            style={styles.dashboardLogo}
+            resizeMode="contain"
+          />
           <View style={styles.headerInfo}>
             <Text style={styles.welcomeText}>Welcome back,</Text>
             <Text style={styles.userName}>{user?.name}</Text>
@@ -501,17 +499,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 32,
   },
-  logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 20,
-    backgroundColor: Colors.cardBackground,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-  },
+
   logo: {
     width: 200,
     height: 200,

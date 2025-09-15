@@ -62,8 +62,12 @@ export default function CheckoutScreen() {
   };
 
   const currentPlan = plans[selectedPlan as keyof typeof plans];
-  const price = isGuestPlan ? currentPlan.deposit : currentPlan[billingCycle as keyof typeof currentPlan];
-  const yearlyDiscount = !isGuestPlan && billingCycle === 'yearly' ? Math.round((currentPlan.monthly * 12 - currentPlan.yearly) / (currentPlan.monthly * 12) * 100) : 0;
+  const price = isGuestPlan 
+    ? (currentPlan as typeof plans.guest).deposit 
+    : (currentPlan as typeof plans.individual | typeof plans.business)[billingCycle];
+  const yearlyDiscount = !isGuestPlan && billingCycle === 'yearly' 
+    ? Math.round(((currentPlan as typeof plans.individual | typeof plans.business).monthly * 12 - (currentPlan as typeof plans.individual | typeof plans.business).yearly) / ((currentPlan as typeof plans.individual | typeof plans.business).monthly * 12) * 100) 
+    : 0;
   
   const getSupportTypeInfo = () => {
     return {
@@ -85,7 +89,7 @@ export default function CheckoutScreen() {
       
       if (isGuestPlan) {
         planName = 'Guest Support';
-        alertMessage = `You would be redirected to Stripe to complete payment for:\n\n${planName}\n${currentPlan.deposit} deposit + ${currentPlan.hourly}/hour\n\nFor demo purposes, we'll simulate a successful payment.`;
+        alertMessage = `You would be redirected to Stripe to complete payment for:\n\n${planName}\n${(currentPlan as typeof plans.guest).deposit} deposit + ${(currentPlan as typeof plans.guest).hourly}/hour\n\nFor demo purposes, we'll simulate a successful payment.`;
       } else {
         planName = selectedPlan === 'individual' ? 'Individual' : 'Small Business Pro';
         alertMessage = `You would be redirected to Stripe to complete payment for:\n\n${planName} Plan\n${price}/${billingCycle === 'monthly' ? 'month' : 'year'}\n\nFor demo purposes, we'll simulate a successful payment.`;
@@ -119,6 +123,8 @@ export default function CheckoutScreen() {
                   billingCycle,
                   status: 'active',
                   nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
                 });
                 
                 Alert.alert('Success!', 'Your subscription is now active. Start getting support now!', [
@@ -308,7 +314,7 @@ export default function CheckoutScreen() {
               <Text style={styles.totalLabel}>Total</Text>
               <Text style={styles.totalValue}>
                 {isGuestPlan 
-                  ? `${currentPlan.deposit} + ${currentPlan.hourly}/hr`
+                  ? `${(currentPlan as typeof plans.guest).deposit} + ${(currentPlan as typeof plans.guest).hourly}/hr`
                   : `${price}/${billingCycle === 'monthly' ? 'mo' : 'yr'}`
                 }
               </Text>
@@ -328,7 +334,7 @@ export default function CheckoutScreen() {
             >
               <CreditCard size={20} color="#FFFFFF" />
               <Text style={styles.checkoutText}>
-                {loading ? 'Processing...' : (isGuestPlan ? 'Pay Deposit & Start' : 'Continue to Payment')}
+                {loading ? 'Processing...' : (isGuestPlan ? 'Pay Deposit & Start' : 'Start Trial')}
               </Text>
             </LinearGradient>
           </TouchableOpacity>

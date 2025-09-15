@@ -45,7 +45,7 @@ export default function ProfileScreen() {
         { 
           icon: Crown, 
           label: 'Current Plan', 
-          value: subscription?.plan === 'business' ? 'Small Business' : 'Individual',
+          value: subscription?.plan === 'business' ? 'Small Business Pro' : 'Individual',
           action: () => router.push('/checkout'),
         },
         { 
@@ -125,8 +125,8 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>RadBiz Security v1.0.0</Text>
-          <Text style={styles.footerSubtext}>© 2025 RadBiz. All rights reserved.</Text>
+          <Text style={styles.footerText}>RadBiz IT & Cyber Security v1.0.0</Text>
+          <Text style={styles.footerSubtext}>© 2025 RadBiz Consultants. All rights reserved.</Text>
         </View>
       </ScrollView>
     </LinearGradient>

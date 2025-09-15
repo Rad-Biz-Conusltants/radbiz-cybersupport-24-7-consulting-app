@@ -48,6 +48,11 @@ export default function DashboardScreen() {
           <Text style={styles.planText}>
             {subscription?.plan === 'business' ? 'Small Business' : 'Individual'} Plan • {subscription?.status || 'Active'}
           </Text>
+          {subscription?.plan === 'business' && (
+            <View style={styles.businessBadge}>
+              <Text style={styles.businessBadgeText}>🏢 Small Business Protected</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.scoreCard}>
@@ -329,5 +334,18 @@ const styles = StyleSheet.create({
   activityTimeText: {
     fontSize: 12,
     color: '#64748B',
+  },
+  businessBadge: {
+    backgroundColor: '#10B98120',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginTop: 8,
+    alignSelf: 'flex-start',
+  },
+  businessBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#10B981',
   },
 });

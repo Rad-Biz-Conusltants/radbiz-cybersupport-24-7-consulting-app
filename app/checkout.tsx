@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Shield, Check, CreditCard, X } from 'lucide-react-native';
 import { router } from 'expo-router';
@@ -19,11 +19,12 @@ export default function CheckoutScreen() {
       monthly: 29,
       yearly: 290,
       features: [
-        '24/7 Support Access',
+        '24/7 IT Support Access',
         'Personal Device Protection',
         'Monthly Security Audits',
         'Priority Email Support',
         'Incident Response',
+        'Basic Cyber Security Training',
       ],
     },
     business: {
@@ -31,11 +32,14 @@ export default function CheckoutScreen() {
       yearly: 990,
       features: [
         'Everything in Individual',
-        'Up to 10 Devices',
+        'Up to 25 Devices & Users',
         'Weekly Security Reports',
         'Dedicated Account Manager',
         'Custom Security Policies',
         'Team Training Sessions',
+        'Network Infrastructure Support',
+        'Compliance Assistance (GDPR, SOX)',
+        'Emergency Response Hotline',
       ],
     },
   };
@@ -47,8 +51,7 @@ export default function CheckoutScreen() {
   const handleCheckout = async () => {
     setLoading(true);
     
-    // Simulate Stripe checkout URL generation
-    const checkoutUrl = `https://checkout.stripe.com/pay/cs_test_${Math.random().toString(36).substring(7)}#plan=${selectedPlan}&billing=${billingCycle}`;
+
     
     try {
       // In a real app, you would:
@@ -68,7 +71,11 @@ export default function CheckoutScreen() {
             text: 'Continue to Stripe',
             onPress: async () => {
               // Simulate successful payment
-              await new Promise(resolve => setTimeout(resolve, 1500));
+              await new Promise((resolve) => {
+                if (typeof resolve === 'function') {
+                  setTimeout(resolve, 1500);
+                }
+              });
               
               setSubscription({
                 plan: selectedPlan,
@@ -84,7 +91,7 @@ export default function CheckoutScreen() {
           },
         ]
       );
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to process payment. Please try again.');
     } finally {
       setLoading(false);
@@ -105,7 +112,7 @@ export default function CheckoutScreen() {
             <X size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Choose Your Plan</Text>
-          <View style={{ width: 40 }} />
+          <View style={styles.headerSpacer} />
         </View>
 
         <ScrollView 
@@ -148,8 +155,8 @@ export default function CheckoutScreen() {
               </View>
             </View>
             <View style={styles.featuresContainer}>
-              {plans.individual.features.map((feature, index) => (
-                <View key={index} style={styles.feature}>
+              {plans.individual.features.map((feature) => (
+                <View key={feature} style={styles.feature}>
                   <Check size={16} color="#10B981" />
                   <Text style={styles.featureText}>{feature}</Text>
                 </View>
@@ -167,18 +174,18 @@ export default function CheckoutScreen() {
             onPress={() => setSelectedPlan('business')}
           >
             <View style={styles.recommendedBadge}>
-              <Text style={styles.recommendedText}>RECOMMENDED</Text>
+              <Text style={styles.recommendedText}>BEST FOR SMALL BUSINESS</Text>
             </View>
             <View style={styles.planHeader}>
-              <Text style={styles.planName}>Small Business</Text>
+              <Text style={styles.planName}>Small Business Pro</Text>
               <View style={styles.priceContainer}>
                 <Text style={styles.price}>${plans.business[billingCycle]}</Text>
                 <Text style={styles.period}>/{billingCycle === 'monthly' ? 'month' : 'year'}</Text>
               </View>
             </View>
             <View style={styles.featuresContainer}>
-              {plans.business.features.map((feature, index) => (
-                <View key={index} style={styles.feature}>
+              {plans.business.features.map((feature) => (
+                <View key={feature} style={styles.feature}>
                   <Check size={16} color="#10B981" />
                   <Text style={styles.featureText}>{feature}</Text>
                 </View>
@@ -195,7 +202,7 @@ export default function CheckoutScreen() {
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Plan</Text>
               <Text style={styles.summaryValue}>
-                {selectedPlan === 'individual' ? 'Individual' : 'Small Business'}
+                {selectedPlan === 'individual' ? 'Individual' : 'Small Business Pro'}
               </Text>
             </View>
             <View style={styles.summaryRow}>
@@ -449,5 +456,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#64748B',
     textAlign: 'center',
+  },
+  headerSpacer: {
+    width: 40,
   },
 });

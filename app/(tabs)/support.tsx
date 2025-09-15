@@ -17,17 +17,19 @@ export default function SupportScreen() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: 'Hello! I\'m your 24/7 IT support assistant. How can I help you today?',
+      text: 'Welcome to RadBiz 24/7 IT Support! I\'m here to help with your business technology needs. What can I assist you with today?',
       sender: 'support',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
 
   const quickActions = [
-    'Report an issue',
-    'Security concern',
-    'Account help',
-    'Technical support',
+    'Network infrastructure help',
+    'Security incident report',
+    'Employee device setup',
+    'Compliance assistance',
+    'Emergency IT support',
+    'System backup issues',
   ];
 
   const sendMessage = () => {
@@ -47,7 +49,7 @@ export default function SupportScreen() {
     setTimeout(() => {
       const response: Message = {
         id: (Date.now() + 1).toString(),
-        text: 'Thank you for your message. A support specialist will respond within 5 minutes. For immediate assistance, you can also call our 24/7 hotline.',
+        text: 'Thank you for contacting RadBiz IT Support. A certified technician will respond within 2 minutes. For critical business issues, use our emergency hotline: 1-800-RADBIZ-1.',
         sender: 'support',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
@@ -96,7 +98,7 @@ export default function SupportScreen() {
         <View style={styles.statusBar}>
           <View style={styles.statusIndicator}>
             <View style={styles.statusDot} />
-            <Text style={styles.statusText}>Support Online • Avg. response: 5 min</Text>
+            <Text style={styles.statusText}>24/7 Business Support • Avg. response: 2 min</Text>
           </View>
           <TouchableOpacity style={styles.callButton}>
             <Headphones size={20} color="#FFFFFF" />

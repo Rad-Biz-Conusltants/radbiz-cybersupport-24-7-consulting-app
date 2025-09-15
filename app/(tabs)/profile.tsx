@@ -1,70 +1,122 @@
-import React from 'react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Mail, Building, CreditCard, Bell, Shield, LogOut, ChevronRight, Crown } from 'lucide-react-native';
+import { User, Mail, Building, Shield, LogOut, Edit3, Bell, CreditCard, HelpCircle } from 'lucide-react-native';
 import { router } from 'expo-router';
-import { useAuth } from '@/providers/auth-provider';
-import { useSubscription } from '@/providers/subscription-provider';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
+import { useAuth } from '@/providers/auth-provider';
+
+interface ProfileOption {
+  id: string;
+  title: string;
+  subtitle?: string;
+  icon: any;
+  action: () => void;
+  showArrow?: boolean;
+}
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
-  const { subscription } = useSubscription();
   const insets = useSafeAreaInsets();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     Alert.alert(
       'Sign Out',
       'Are you sure you want to sign out?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Sign Out', 
+        {
+          text: 'Sign Out',
           style: 'destructive',
-          onPress: () => {
-            signOut();
-            router.replace('/');
+          onPress: async () => {
+            setIsLoading(true);
+            try {
+              await signOut();
+              router.replace('/');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to sign out. Please try again.');
+            } finally {
+              setIsLoading(false);
+            }
           }
-        },
+        }
       ]
     );
   };
 
-  const profileSections = [
+  const handleEditProfile = () => {
+    Alert.alert('Edit Profile', 'Profile editing functionality coming soon.');
+  };
+
+  const handleNotifications = () => {
+    Alert.alert('Notifications', 'Notification settings coming soon.');
+  };
+
+  const handleBilling = () => {
+    router.push('/credits/add');
+  };
+
+  const handleSupport = () => {
+    router.push('/(tabs)/support');
+  };
+
+  const profileOptions: ProfileOption[] = [
     {
-      title: 'Account',
-      items: [
-        { icon: User, label: 'Personal Information', value: user?.name || 'User' },
-        { icon: Mail, label: 'Email', value: user?.email || 'user@example.com' },
-        { icon: Building, label: 'Company', value: user?.company || 'Not specified' },
-      ],
+      id: 'edit',
+      title: 'Edit Profile',
+      subtitle: 'Update your personal information',
+      icon: Edit3,
+      action: handleEditProfile,
+      showArrow: true
     },
     {
-      title: 'Subscription',
-      items: [
-        { 
-          icon: Crown, 
-          label: 'Current Plan', 
-          value: subscription?.plan === 'business' ? 'Small Business Pro' : 'Individual',
-          action: () => router.push('/checkout'),
-        },
-        { 
-          icon: CreditCard, 
-          label: 'Billing', 
-          value: subscription?.billingCycle === 'yearly' ? 'Yearly' : 'Monthly',
-          action: () => router.push('/checkout'),
-        },
-      ],
+      id: 'notifications',
+      title: 'Notifications',
+      subtitle: 'Manage your notification preferences',
+      icon: Bell,
+      action: handleNotifications,
+      showArrow: true
     },
     {
-      title: 'Preferences',
-      items: [
-        { icon: Bell, label: 'Notifications', value: 'Enabled', action: () => {} },
-        { icon: Shield, label: 'Privacy & Security', value: '', action: () => {} },
-      ],
+      id: 'billing',
+      title: 'Billing & Credits',
+      subtitle: 'Manage your subscription and credits',
+      icon: CreditCard,
+      action: handleBilling,
+      showArrow: true
     },
+    {
+      id: 'support',
+      title: 'Help & Support',
+      subtitle: 'Get help from our support team',
+      icon: HelpCircle,
+      action: handleSupport,
+      showArrow: true
+    }
   ];
+
+  if (!user) {
+    return (
+      <LinearGradient
+        colors={[Colors.backgroundStart, Colors.backgroundEnd]}
+        style={styles.container}
+      >
+        <View style={styles.emptyState}>
+          <User size={64} color={Colors.textMuted} />
+          <Text style={styles.emptyTitle}>Not Signed In</Text>
+          <Text style={styles.emptyText}>Please sign in to view your profile</Text>
+          <TouchableOpacity 
+            style={styles.signInButton}
+            onPress={() => router.push('/(auth)/login')}
+          >
+            <Text style={styles.signInButtonText}>Sign In</Text>
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
+    );
+  }
 
   return (
     <LinearGradient
@@ -75,59 +127,141 @@ export default function ProfileScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20 }]}
         showsVerticalScrollIndicator={false}
       >
+        {/* Profile Header */}
         <View style={styles.profileHeader}>
-          <View style={styles.avatar}>
-            <User size={40} color="#FFFFFF" />
-          </View>
-          <Text style={styles.userName}>{user?.name || 'User'}</Text>
-          <Text style={styles.userEmail}>{user?.email || 'user@example.com'}</Text>
-          <View style={styles.planBadge}>
-            <Crown size={14} color={Colors.warning} />
-            <Text style={styles.planBadgeText}>
-              {subscription?.plan === 'business' ? 'Business' : 'Individual'} Plan
-            </Text>
-          </View>
+          <LinearGradient
+            colors={[Colors.cardBackground, '#2A2A2A']}
+            style={styles.profileGradient}
+          >
+            <View style={styles.profileInfo}>
+              <View style={[styles.profileAvatar, { backgroundColor: Colors.primaryAlpha }]}>
+                <User size={32} color={Colors.primary} />
+              </View>
+              <View style={styles.profileDetails}>
+                <Text style={styles.profileName}>{user.name}</Text>
+                <View style={styles.profileEmailRow}>
+                  <Mail size={14} color={Colors.textMuted} />
+                  <Text style={styles.profileEmail}>{user.email}</Text>
+                </View>
+                {user.company && (
+                  <View style={styles.profileCompanyRow}>
+                    <Building size={14} color={Colors.textMuted} />
+                    <Text style={styles.profileCompany}>{user.company}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+            
+            <View style={styles.accountBadge}>
+              <View style={[styles.badgeContainer, { backgroundColor: user.planType === 'business' ? Colors.primaryAlpha : Colors.accentAlpha }]}>
+                <Shield size={16} color={user.planType === 'business' ? Colors.primary : Colors.accent} />
+                <Text style={[styles.badgeText, { color: user.planType === 'business' ? Colors.primary : Colors.accent }]}>
+                  {user.planType === 'business' ? 'Business Account' : 'Personal Account'}
+                </Text>
+              </View>
+            </View>
+          </LinearGradient>
         </View>
 
-        {profileSections.map((section) => (
-          <View key={section.title} style={styles.section}>
-            <Text style={styles.sectionTitle}>{section.title}</Text>
-            <View style={styles.sectionContent}>
-              {section.items.map((item, itemIndex) => (
-                <TouchableOpacity
-                  key={`${section.title}-${itemIndex}`}
-                  style={styles.settingItem}
-                  onPress={'action' in item ? item.action : undefined}
-                  disabled={!('action' in item)}
+        {/* Account Stats */}
+        {user.planType === 'business' && (
+          <View style={styles.statsSection}>
+            <Text style={styles.sectionTitle}>Account Overview</Text>
+            <View style={styles.statsGrid}>
+              <View style={styles.statCard}>
+                <LinearGradient
+                  colors={[Colors.cardBackground, '#2A2A2A']}
+                  style={styles.statGradient}
                 >
-                  <View style={styles.settingLeft}>
-                    <View style={styles.settingIcon}>
-                      <item.icon size={20} color={Colors.accent} />
-                    </View>
-                    <View style={styles.settingInfo}>
-                      <Text style={styles.settingLabel}>{item.label}</Text>
-                      {item.value ? (
-                        <Text style={styles.settingValue}>{item.value}</Text>
-                      ) : null}
-                    </View>
-                  </View>
-                  {'action' in item && (
-                    <ChevronRight size={20} color={Colors.textMuted} />
-                  )}
-                </TouchableOpacity>
-              ))}
+                  <Text style={styles.statValue}>15</Text>
+                  <Text style={styles.statLabel}>Tickets Used</Text>
+                </LinearGradient>
+              </View>
+              
+              <View style={styles.statCard}>
+                <LinearGradient
+                  colors={[Colors.cardBackground, '#2A2A2A']}
+                  style={styles.statGradient}
+                >
+                  <Text style={styles.statValue}>$850</Text>
+                  <Text style={styles.statLabel}>Credit Balance</Text>
+                </LinearGradient>
+              </View>
+              
+              <View style={styles.statCard}>
+                <LinearGradient
+                  colors={[Colors.cardBackground, '#2A2A2A']}
+                  style={styles.statGradient}
+                >
+                  <Text style={styles.statValue}>8</Text>
+                  <Text style={styles.statLabel}>Team Members</Text>
+                </LinearGradient>
+              </View>
             </View>
           </View>
-        ))}
+        )}
 
-        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-          <LogOut size={20} color={Colors.error} />
-          <Text style={styles.signOutText}>Sign Out</Text>
-        </TouchableOpacity>
+        {/* Profile Options */}
+        <View style={styles.optionsSection}>
+          <Text style={styles.sectionTitle}>Settings</Text>
+          
+          {profileOptions.map((option) => {
+            const IconComponent = option.icon;
+            return (
+              <TouchableOpacity
+                key={option.id}
+                style={styles.optionCard}
+                onPress={option.action}
+              >
+                <LinearGradient
+                  colors={[Colors.cardBackground, '#2A2A2A']}
+                  style={styles.optionGradient}
+                >
+                  <View style={styles.optionContent}>
+                    <View style={[styles.optionIcon, { backgroundColor: Colors.accentAlpha }]}>
+                      <IconComponent size={20} color={Colors.accent} />
+                    </View>
+                    <View style={styles.optionInfo}>
+                      <Text style={styles.optionTitle}>{option.title}</Text>
+                      {option.subtitle && (
+                        <Text style={styles.optionSubtitle}>{option.subtitle}</Text>
+                      )}
+                    </View>
+                    {option.showArrow && (
+                      <View style={styles.optionArrow}>
+                        <Text style={styles.arrowText}>›</Text>
+                      </View>
+                    )}
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>RadBiz IT & Cyber Security v1.0.0</Text>
-          <Text style={styles.footerSubtext}>© 2025 RadBiz Consultants. All rights reserved.</Text>
+        {/* Sign Out */}
+        <View style={styles.signOutSection}>
+          <TouchableOpacity 
+            style={styles.signOutButton}
+            onPress={handleSignOut}
+            disabled={isLoading}
+          >
+            <LinearGradient
+              colors={[Colors.errorAlpha, Colors.cardBackground]}
+              style={styles.signOutGradient}
+            >
+              <LogOut size={20} color={Colors.error} />
+              <Text style={styles.signOutText}>
+                {isLoading ? 'Signing Out...' : 'Sign Out'}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+
+        {/* App Info */}
+        <View style={styles.appInfo}>
+          <Text style={styles.appInfoText}>RadBiz Security v1.0.0</Text>
+          <Text style={styles.appInfoText}>© 2024 RadBiz Consultants</Text>
         </View>
       </ScrollView>
     </LinearGradient>
@@ -143,123 +277,215 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   profileHeader: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: 4,
-  },
-  userEmail: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginBottom: 12,
-  },
-  planBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: Colors.warningAlpha,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  planBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.warning,
-  },
-  section: {
     marginBottom: 24,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-    marginBottom: 12,
-    marginLeft: 4,
-  },
-  sectionContent: {
-    backgroundColor: Colors.cardBackground,
-    borderRadius: 16,
-    overflow: 'hidden',
+  profileGradient: {
+    padding: 24,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: Colors.cardBorder,
   },
-  settingItem: {
+  profileInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.cardBorder,
+    marginBottom: 16,
   },
-  settingLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  settingIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: Colors.accentAlpha,
+  profileAvatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 20,
   },
-  settingInfo: {
+  profileDetails: {
     flex: 1,
   },
-  settingLabel: {
+  profileName: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 8,
+  },
+  profileEmailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  profileEmail: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginLeft: 8,
+  },
+  profileCompanyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  profileCompany: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginLeft: 8,
+  },
+  accountBadge: {
+    alignItems: 'center',
+  },
+  badgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  badgeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  statsSection: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 16,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  statCard: {
+    width: '30%',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  statGradient: {
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    borderRadius: 12,
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.primary,
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  optionsSection: {
+    marginBottom: 24,
+  },
+  optionCard: {
+    marginBottom: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  optionGradient: {
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    borderRadius: 12,
+  },
+  optionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  optionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  optionInfo: {
+    flex: 1,
+  },
+  optionTitle: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
     color: Colors.textPrimary,
     marginBottom: 2,
   },
-  settingValue: {
-    fontSize: 14,
+  optionSubtitle: {
+    fontSize: 12,
     color: Colors.textSecondary,
   },
+  optionArrow: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  arrowText: {
+    fontSize: 20,
+    color: Colors.textMuted,
+    fontWeight: '300',
+  },
+  signOutSection: {
+    marginBottom: 24,
+  },
   signOutButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  signOutGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: Colors.cardBackground,
-    borderRadius: 12,
     padding: 16,
-    marginTop: 8,
     borderWidth: 1,
-    borderColor: Colors.error,
+    borderColor: Colors.errorAlpha,
+    borderRadius: 12,
   },
   signOutText: {
+    color: Colors.error,
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.error,
+    marginLeft: 8,
   },
-  footer: {
+  appInfo: {
     alignItems: 'center',
-    marginTop: 32,
+    paddingVertical: 20,
   },
-  footerText: {
-    fontSize: 14,
+  appInfoText: {
+    fontSize: 12,
     color: Colors.textMuted,
     marginBottom: 4,
   },
-  footerSubtext: {
-    fontSize: 12,
-    color: Colors.textMuted,
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 40,
+  },
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  signInButton: {
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    backgroundColor: Colors.primary,
+    borderRadius: 8,
+  },
+  signInButtonText: {
+    color: Colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

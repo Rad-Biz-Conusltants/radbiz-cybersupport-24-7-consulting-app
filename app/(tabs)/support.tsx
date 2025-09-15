@@ -1,160 +1,265 @@
 import React, { useState } from 'react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Send, Headphones, Bot, User } from 'lucide-react-native';
+import { MessageCircle, Phone, Video, Mail, Clock, CheckCircle, User, Send, Paperclip, Star } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Colors from '@/constants/colors';
+import { useAuth } from '@/providers/auth-provider';
 
-interface Message {
+interface SupportAgent {
   id: string;
-  text: string;
-  sender: 'user' | 'support';
-  timestamp: string;
+  name: string;
+  role: string;
+  status: 'online' | 'busy' | 'offline';
+  rating: number;
+  specialties: string[];
 }
 
 export default function SupportScreen() {
+  const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<Message[]>([
+  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
+
+  const supportAgents: SupportAgent[] = [
     {
       id: '1',
-      text: 'Welcome to RadBiz 24/7 IT Support! I\'m here to help with your business technology needs. What can I assist you with today?',
-      sender: 'support',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      name: 'John Smith',
+      role: 'Senior IT Specialist',
+      status: 'online',
+      rating: 4.9,
+      specialties: ['Network Security', 'Server Management', 'Email Systems']
     },
-  ]);
-
-  const quickActions = [
-    'Network infrastructure help',
-    'Security incident report',
-    'Employee device setup',
-    'Compliance assistance',
-    'Emergency IT support',
-    'System backup issues',
+    {
+      id: '2',
+      name: 'Sarah Johnson',
+      role: 'Cybersecurity Expert',
+      status: 'online',
+      rating: 4.8,
+      specialties: ['Threat Analysis', 'Firewall Configuration', 'Security Audits']
+    },
+    {
+      id: '3',
+      name: 'Mike Davis',
+      role: 'IT Support Technician',
+      status: 'busy',
+      rating: 4.7,
+      specialties: ['Hardware Troubleshooting', 'Software Installation', 'User Support']
+    }
   ];
 
-  const sendMessage = () => {
-    if (!message.trim()) return;
-
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      text: message,
-      sender: 'user',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-
-    setMessages([...messages, newMessage]);
-    setMessage('');
-
-    // Simulate support response
-    setTimeout(() => {
-      const response: Message = {
-        id: (Date.now() + 1).toString(),
-        text: 'Thank you for contacting RadBiz IT Support. A certified technician will respond within 2 minutes. For critical business issues, use our emergency hotline: 1-800-RADBIZ-1.',
-        sender: 'support',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-      setMessages(prev => [...prev, response]);
-    }, 1000);
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'online': return Colors.success;
+      case 'busy': return Colors.warning;
+      case 'offline': return Colors.error;
+      default: return Colors.textMuted;
+    }
   };
 
-  const handleQuickAction = (action: string) => {
-    if (!action?.trim() || action.length > 100) return;
-    setMessage(action.trim());
+  const handleStartChat = (agentId: string) => {
+    setSelectedAgent(agentId);
+    Alert.alert('Chat Started', 'You are now connected with a support agent.');
   };
 
-  const renderMessage = ({ item }: { item: Message }) => (
-    <View style={[styles.messageContainer, item.sender === 'user' && styles.userMessageContainer]}>
-      {item.sender === 'support' && (
-        <View style={styles.supportAvatar}>
-          <Bot size={20} color="#3B82F6" />
-        </View>
-      )}
-      <View style={[styles.messageBubble, item.sender === 'user' && styles.userMessageBubble]}>
-        <Text style={[styles.messageText, item.sender === 'user' && styles.userMessageText]}>
-          {item.text}
-        </Text>
-        <Text style={[styles.messageTime, item.sender === 'user' && styles.userMessageTime]}>
-          {item.timestamp}
-        </Text>
-      </View>
-      {item.sender === 'user' && (
-        <View style={styles.userAvatar}>
-          <User size={20} color="#FFFFFF" />
-        </View>
-      )}
-    </View>
-  );
+  const handleVideoCall = () => {
+    Alert.alert('Video Call', 'Starting video call with support agent...');
+  };
+
+  const handlePhoneCall = () => {
+    Alert.alert('Phone Call', 'Connecting you to our support hotline...');
+  };
+
+  const handleSendMessage = () => {
+    if (message.trim()) {
+      Alert.alert('Message Sent', 'Your message has been sent to the support team.');
+      setMessage('');
+    }
+  };
 
   return (
     <LinearGradient
-      colors={['#0F172A', '#1E293B']}
+      colors={[Colors.backgroundStart, Colors.backgroundEnd]}
       style={styles.container}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={[styles.keyboardView, { paddingTop: insets.top }]}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      <ScrollView 
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20 }]}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.statusBar}>
-          <View style={styles.statusIndicator}>
-            <View style={styles.statusDot} />
-            <Text style={styles.statusText}>24/7 Business Support • Avg. response: 2 min</Text>
-          </View>
-          <TouchableOpacity style={styles.callButton}>
-            <Headphones size={20} color="#FFFFFF" />
-            <Text style={styles.callButtonText}>Call</Text>
-          </TouchableOpacity>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Live Support</Text>
+          <Text style={styles.headerSubtitle}>
+            Get instant help from our expert support team
+          </Text>
         </View>
 
-        <FlatList
-          data={messages}
-          renderItem={renderMessage}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.messagesContent}
-          showsVerticalScrollIndicator={false}
-        />
-
-        <View style={styles.inputSection}>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            style={styles.quickActionsScroll}
-          >
-            <View style={styles.quickActions}>
-              {quickActions.map((action) => (
-                <TouchableOpacity
-                  key={action}
-                  style={styles.quickActionButton}
-                  onPress={() => {
-                    if (!action?.trim() || action.length > 100) return;
-                    handleQuickAction(action.trim());
-                  }}
-                >
-                  <Text style={styles.quickActionText}>{action}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </ScrollView>
-
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Type your message..."
-              placeholderTextColor="#64748B"
-              value={message}
-              onChangeText={setMessage}
-              multiline
-            />
+        {/* Quick Actions */}
+        <View style={styles.quickActions}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <View style={styles.actionsGrid}>
             <TouchableOpacity 
-              style={[styles.sendButton, !message.trim() && styles.sendButtonDisabled]}
-              onPress={sendMessage}
-              disabled={!message.trim()}
+              style={styles.actionCard}
+              onPress={handleVideoCall}
             >
-              <Send size={20} color={message.trim() ? "#FFFFFF" : "#64748B"} />
+              <LinearGradient
+                colors={[Colors.primary, Colors.primaryDark]}
+                style={styles.actionGradient}
+              >
+                <Video size={24} color={Colors.textPrimary} />
+                <Text style={styles.actionText}>Video Call</Text>
+                <Text style={styles.actionSubtext}>Screen sharing available</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.actionCard}
+              onPress={handlePhoneCall}
+            >
+              <LinearGradient
+                colors={[Colors.accent, Colors.accentDark]}
+                style={styles.actionGradient}
+              >
+                <Phone size={24} color={Colors.textPrimary} />
+                <Text style={styles.actionText}>Phone Call</Text>
+                <Text style={styles.actionSubtext}>24/7 hotline</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         </View>
-      </KeyboardAvoidingView>
+
+        {/* Available Agents */}
+        <View style={styles.agentsSection}>
+          <Text style={styles.sectionTitle}>Available Support Agents</Text>
+          
+          {supportAgents.map((agent) => (
+            <View key={agent.id} style={styles.agentCard}>
+              <LinearGradient
+                colors={[Colors.cardBackground, '#2A2A2A']}
+                style={styles.cardGradient}
+              >
+                <View style={styles.agentHeader}>
+                  <View style={styles.agentInfo}>
+                    <View style={[styles.agentAvatar, { backgroundColor: Colors.primaryAlpha }]}>
+                      <User size={20} color={Colors.primary} />
+                    </View>
+                    <View style={styles.agentDetails}>
+                      <View style={styles.agentNameRow}>
+                        <Text style={styles.agentName}>{agent.name}</Text>
+                        <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(agent.status) }]} />
+                        <Text style={[styles.statusText, { color: getStatusColor(agent.status) }]}>
+                          {agent.status.charAt(0).toUpperCase() + agent.status.slice(1)}
+                        </Text>
+                      </View>
+                      <Text style={styles.agentRole}>{agent.role}</Text>
+                      <View style={styles.ratingRow}>
+                        <Star size={12} color={Colors.warning} fill={Colors.warning} />
+                        <Text style={styles.ratingText}>{agent.rating}</Text>
+                      </View>
+                    </View>
+                  </View>
+                  
+                  {agent.status === 'online' && (
+                    <TouchableOpacity 
+                      style={styles.chatButton}
+                      onPress={() => handleStartChat(agent.id)}
+                    >
+                      <MessageCircle size={16} color={Colors.primary} />
+                      <Text style={styles.chatButtonText}>Chat</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                
+                <View style={styles.specialties}>
+                  <Text style={styles.specialtiesLabel}>Specialties:</Text>
+                  <View style={styles.specialtyTags}>
+                    {agent.specialties.map((specialty, index) => (
+                      <View key={index} style={styles.specialtyTag}>
+                        <Text style={styles.specialtyText}>{specialty}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              </LinearGradient>
+            </View>
+          ))}
+        </View>
+
+        {/* Support Stats */}
+        <View style={styles.statsSection}>
+          <Text style={styles.sectionTitle}>Support Statistics</Text>
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}>
+              <View style={[styles.statIcon, { backgroundColor: Colors.successAlpha }]}>
+                <Clock size={20} color={Colors.success} />
+              </View>
+              <Text style={styles.statValue}>&lt; 5 min</Text>
+              <Text style={styles.statLabel}>Avg Response Time</Text>
+            </View>
+            
+            <View style={styles.statCard}>
+              <View style={[styles.statIcon, { backgroundColor: Colors.primaryAlpha }]}>
+                <CheckCircle size={20} color={Colors.primary} />
+              </View>
+              <Text style={styles.statValue}>98.5%</Text>
+              <Text style={styles.statLabel}>Resolution Rate</Text>
+            </View>
+            
+            <View style={styles.statCard}>
+              <View style={[styles.statIcon, { backgroundColor: Colors.accentAlpha }]}>
+                <User size={20} color={Colors.accent} />
+              </View>
+              <Text style={styles.statValue}>24/7</Text>
+              <Text style={styles.statLabel}>Availability</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Contact Information */}
+        <View style={styles.contactSection}>
+          <LinearGradient
+            colors={[Colors.cardBackground, '#2A2A2A']}
+            style={styles.contactGradient}
+          >
+            <Text style={styles.contactTitle}>Emergency Contact</Text>
+            <Text style={styles.contactText}>
+              For critical security incidents or system outages, contact our emergency hotline:
+            </Text>
+            <TouchableOpacity style={styles.emergencyButton}>
+              <Phone size={16} color={Colors.error} />
+              <Text style={styles.emergencyText}>+1 (555) 911-HELP</Text>
+            </TouchableOpacity>
+            <Text style={styles.contactNote}>
+              Available 24/7 for business customers
+            </Text>
+          </LinearGradient>
+        </View>
+      </ScrollView>
+
+      {/* Quick Message */}
+      <View style={[styles.messageInput, { paddingBottom: insets.bottom + 20 }]}>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.textInput}
+            placeholder="Send a quick message to support..."
+            placeholderTextColor={Colors.textMuted}
+            value={message}
+            onChangeText={setMessage}
+            multiline
+            maxLength={500}
+          />
+          <TouchableOpacity style={styles.attachButton}>
+            <Paperclip size={20} color={Colors.textMuted} />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.sendButton, { opacity: message.trim() ? 1 : 0.5 }]}
+            onPress={handleSendMessage}
+            disabled={!message.trim()}
+          >
+            <Send size={20} color={Colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
+      </View>
     </LinearGradient>
   );
 }
@@ -163,159 +268,283 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  keyboardView: {
-    flex: 1,
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 40,
   },
-  statusBar: {
+  header: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 8,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  quickActions: {
+    marginBottom: 32,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 16,
+  },
+  actionsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: '#1E293B',
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
   },
-  statusIndicator: {
+  actionCard: {
+    width: '48%',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  actionGradient: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 120,
+  },
+  actionText: {
+    color: Colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  actionSubtext: {
+    color: Colors.textPrimary,
+    fontSize: 12,
+    opacity: 0.8,
+  },
+  agentsSection: {
+    marginBottom: 32,
+  },
+  agentCard: {
+    marginBottom: 16,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  cardGradient: {
+    padding: 20,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    borderRadius: 16,
+  },
+  agentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  agentInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    flex: 1,
   },
-  statusDot: {
+  agentAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  agentDetails: {
+    flex: 1,
+  },
+  agentNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  agentName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    marginRight: 8,
+  },
+  statusIndicator: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#10B981',
+    marginRight: 6,
   },
   statusText: {
-    fontSize: 14,
-    color: '#94A3B8',
-  },
-  callButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  callButtonText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
-    color: '#FFFFFF',
   },
-  messagesContent: {
-    padding: 20,
-    paddingBottom: 10,
-  },
-  messageContainer: {
-    flexDirection: 'row',
-    marginBottom: 16,
-    alignItems: 'flex-end',
-  },
-  userMessageContainer: {
-    justifyContent: 'flex-end',
-  },
-  supportAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#3B82F620',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  userAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#8B5CF6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-  },
-  messageBubble: {
-    maxWidth: '75%',
-    backgroundColor: '#1E293B',
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  userMessageBubble: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
-  },
-  messageText: {
+  agentRole: {
     fontSize: 14,
-    color: '#FFFFFF',
+    color: Colors.textSecondary,
     marginBottom: 4,
   },
-  userMessageText: {
-    color: '#FFFFFF',
-  },
-  messageTime: {
-    fontSize: 11,
-    color: '#64748B',
-  },
-  userMessageTime: {
-    color: '#E2E8F0',
-  },
-  inputSection: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    backgroundColor: '#0F172A',
-    borderTopWidth: 1,
-    borderTopColor: '#334155',
-  },
-  quickActionsScroll: {
-    maxHeight: 40,
-    marginVertical: 12,
-  },
-  quickActions: {
+  ratingRow: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
   },
-  quickActionButton: {
+  ratingText: {
+    fontSize: 12,
+    color: Colors.warning,
+    marginLeft: 4,
+    fontWeight: '600',
+  },
+  chatButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#1E293B',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#334155',
+    backgroundColor: Colors.primaryAlpha,
+    borderRadius: 8,
   },
-  quickActionText: {
+  chatButtonText: {
+    color: Colors.primary,
     fontSize: 14,
-    color: '#94A3B8',
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  specialties: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.cardBorder,
+    paddingTop: 16,
+  },
+  specialtiesLabel: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    marginBottom: 8,
+  },
+  specialtyTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  specialtyTag: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: Colors.accentAlpha,
+    borderRadius: 6,
+  },
+  specialtyText: {
+    fontSize: 10,
+    color: Colors.accent,
+    fontWeight: '600',
+  },
+  statsSection: {
+    marginBottom: 32,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  statCard: {
+    width: '30%',
+    backgroundColor: Colors.cardBackground,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  statIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  contactSection: {
+    marginBottom: 20,
+  },
+  contactGradient: {
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    alignItems: 'center',
+  },
+  contactTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 12,
+  },
+  contactText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  emergencyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: Colors.errorAlpha,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  emergencyText: {
+    color: Colors.error,
+    fontSize: 16,
+    fontWeight: '700',
+    marginLeft: 8,
+  },
+  contactNote: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    textAlign: 'center',
+  },
+  messageInput: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    backgroundColor: Colors.cardBackground,
+    borderTopWidth: 1,
+    borderTopColor: Colors.cardBorder,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    backgroundColor: '#1E293B',
-    borderRadius: 24,
+    backgroundColor: Colors.backgroundStart,
+    borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.cardBorder,
   },
-  input: {
+  textInput: {
     flex: 1,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
     maxHeight: 100,
     paddingVertical: 8,
   },
-  sendButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#3B82F6',
-    alignItems: 'center',
-    justifyContent: 'center',
+  attachButton: {
+    padding: 8,
     marginLeft: 8,
   },
-  sendButtonDisabled: {
-    backgroundColor: '#334155',
+  sendButton: {
+    padding: 8,
+    backgroundColor: Colors.primary,
+    borderRadius: 8,
+    marginLeft: 8,
   },
 });

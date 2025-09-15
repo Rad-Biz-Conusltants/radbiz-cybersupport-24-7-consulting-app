@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Shield, Monitor, ArrowRight, CheckCircle, Clock, Users, Ticket, AlertTriangle, DollarSign, Settings, Plus, Eye, MapPin, Calendar } from 'lucide-react-native';
+import { Shield, Monitor, ArrowRight, CheckCircle, Clock, Users, Ticket, AlertTriangle, DollarSign, Plus, Eye, MapPin, Calendar } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
@@ -83,41 +83,51 @@ function ClientDashboard() {
               <Text style={styles.companyName}>{user.company}</Text>
             )}
           </View>
-          <TouchableOpacity style={styles.settingsButton}>
-            <Settings size={24} color={Colors.textMuted} />
-          </TouchableOpacity>
+
         </View>
 
         {/* Quick Stats */}
         <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
+          <TouchableOpacity 
+            style={styles.statCard}
+            onPress={() => router.push('/tickets?filter=open')}
+          >
             <View style={[styles.statIcon, { backgroundColor: Colors.errorAlpha }]}>
               <Ticket size={20} color={Colors.error} />
             </View>
             <Text style={styles.statValue}>{ticketStats.open}</Text>
             <Text style={styles.statLabel}>Open Tickets</Text>
-          </View>
-          <View style={styles.statCard}>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.statCard}
+            onPress={() => router.push('/tickets?filter=closed')}
+          >
             <View style={[styles.statIcon, { backgroundColor: Colors.successAlpha }]}>
               <CheckCircle size={20} color={Colors.success} />
             </View>
             <Text style={styles.statValue}>{ticketStats.closed}</Text>
             <Text style={styles.statLabel}>Closed Tickets</Text>
-          </View>
-          <View style={styles.statCard}>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.statCard}
+            onPress={() => router.push('/tickets?filter=pending')}
+          >
             <View style={[styles.statIcon, { backgroundColor: Colors.warningAlpha }]}>
               <Clock size={20} color={Colors.warning} />
             </View>
             <Text style={styles.statValue}>{ticketStats.pending}</Text>
             <Text style={styles.statLabel}>Pending</Text>
-          </View>
-          <View style={styles.statCard}>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.statCard}
+            onPress={() => router.push('/tickets')}
+          >
             <View style={[styles.statIcon, { backgroundColor: Colors.accentAlpha }]}>
               <AlertTriangle size={20} color={Colors.accent} />
             </View>
             <Text style={styles.statValue}>{ticketStats.total}</Text>
             <Text style={styles.statLabel}>Total Tickets</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Business Account Advanced Features */}
@@ -139,6 +149,13 @@ function ClientDashboard() {
                     <Text style={styles.businessTitle}>Account Balance</Text>
                     <Text style={styles.businessValue}>${businessStats.balance}</Text>
                   </View>
+                  <TouchableOpacity 
+                    style={styles.addCreditsButton}
+                    onPress={() => router.push('/credits/add')}
+                  >
+                    <Plus size={16} color={Colors.primary} />
+                    <Text style={styles.addCreditsText}>Add Credits</Text>
+                  </TouchableOpacity>
                 </View>
                 <View style={styles.usageBar}>
                   <View style={styles.usageBarBackground}>
@@ -173,7 +190,10 @@ function ClientDashboard() {
                     <Text style={styles.businessTitle}>Authorized Users</Text>
                     <Text style={styles.businessValue}>{businessStats.authorizedUsers}/{businessStats.maxUsers}</Text>
                   </View>
-                  <TouchableOpacity style={styles.manageButton}>
+                  <TouchableOpacity 
+                    style={styles.manageButton}
+                    onPress={() => router.push('/users/manage')}
+                  >
                     <Text style={styles.manageButtonText}>Manage</Text>
                   </TouchableOpacity>
                 </View>
@@ -186,14 +206,21 @@ function ClientDashboard() {
         <View style={styles.ticketsSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Recent Tickets</Text>
-            <TouchableOpacity style={styles.viewAllButton}>
+            <TouchableOpacity 
+              style={styles.viewAllButton}
+              onPress={() => router.push('/tickets')}
+            >
               <Text style={styles.viewAllText}>View All</Text>
               <ArrowRight size={16} color={Colors.accent} />
             </TouchableOpacity>
           </View>
           
           {recentTickets.map((ticket) => (
-            <TouchableOpacity key={ticket.id} style={styles.ticketCard}>
+            <TouchableOpacity 
+              key={ticket.id} 
+              style={styles.ticketCard}
+              onPress={() => router.push(`/tickets/${ticket.id}`)}
+            >
               <LinearGradient
                 colors={[Colors.cardBackground, '#2A2A2A']}
                 style={styles.cardGradient}
@@ -238,7 +265,10 @@ function ClientDashboard() {
         <View style={styles.actionsSection}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.actionsGrid}>
-            <TouchableOpacity style={styles.actionCard}>
+            <TouchableOpacity 
+              style={styles.actionCard}
+              onPress={() => router.push('/tickets/new')}
+            >
               <LinearGradient
                 colors={[Colors.primary, Colors.primaryDark]}
                 style={styles.actionGradient}
@@ -247,13 +277,16 @@ function ClientDashboard() {
                 <Text style={styles.actionText}>New Ticket</Text>
               </LinearGradient>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionCard}>
+            <TouchableOpacity 
+              style={styles.actionCard}
+              onPress={() => router.push('/(tabs)/support')}
+            >
               <LinearGradient
                 colors={[Colors.accent, Colors.accentDark]}
                 style={styles.actionGradient}
               >
                 <Eye size={24} color={Colors.textPrimary} />
-                <Text style={styles.actionText}>View Support</Text>
+                <Text style={styles.actionText}>Get Live Support</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -660,8 +693,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
   },
-  settingsButton: {
-    padding: 8,
+  addCreditsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: Colors.primaryAlpha,
+    borderRadius: 8,
+  },
+  addCreditsText: {
+    color: Colors.primary,
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
   },
   statsGrid: {
     flexDirection: 'row',

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Alert, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Shield, Mail, Lock, ArrowLeft } from 'lucide-react-native';
+import { Mail, Lock, ArrowLeft } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/providers/auth-provider';
@@ -54,7 +54,11 @@ export default function LoginScreen() {
 
             <View style={styles.header}>
               <View style={styles.logoContainer}>
-                <Shield size={48} color={Colors.primary} />
+                <Image 
+                  source={require('@/assets/images/adaptive-icon.png')} 
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
               </View>
               <Text style={styles.title}>Welcome Back</Text>
               <Text style={styles.subtitle}>Sign in to access your security dashboard</Text>
@@ -88,7 +92,10 @@ export default function LoginScreen() {
                 />
               </View>
 
-              <TouchableOpacity style={styles.forgotPassword}>
+              <TouchableOpacity 
+                style={styles.forgotPassword}
+                onPress={() => router.push('/(auth)/forgot-password')}
+              >
                 <Text style={styles.forgotPasswordText}>Forgot password?</Text>
               </TouchableOpacity>
 
@@ -115,15 +122,35 @@ export default function LoginScreen() {
                 <View style={styles.dividerLine} />
               </View>
 
-              <TouchableOpacity 
-                style={styles.demoButton}
-                onPress={() => {
-                  setEmail('demo@radbiz.com');
-                  setPassword('password');
-                }}
-              >
-                <Text style={styles.demoButtonText}>Use Demo Account</Text>
-              </TouchableOpacity>
+              <View style={styles.demoSection}>
+                <TouchableOpacity 
+                  style={styles.demoButton}
+                  onPress={async () => {
+                    try {
+                      await signIn('client@radbiz.com', 'password');
+                      router.replace('/(tabs)/home');
+                    } catch (error) {
+                      Alert.alert('Error', 'Demo account unavailable');
+                    }
+                  }}
+                >
+                  <Text style={styles.demoButtonText}>Client Demo Account</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[styles.demoButton, styles.techDemoButton]}
+                  onPress={async () => {
+                    try {
+                      await signIn('tech@radbiz.com', 'password');
+                      router.replace('/(tabs)/home');
+                    } catch (error) {
+                      Alert.alert('Error', 'Demo account unavailable');
+                    }
+                  }}
+                >
+                  <Text style={styles.demoButtonText}>Rad Biz Tech Demo</Text>
+                </TouchableOpacity>
+              </View>
 
               <View style={styles.signupContainer}>
                 <Text style={styles.signupText}>Don&apos;t have an account? </Text>
@@ -176,6 +203,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
+  },
+  logo: {
+    width: 60,
+    height: 60,
   },
   title: {
     fontSize: 32,
@@ -248,6 +279,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginHorizontal: 16,
   },
+  demoSection: {
+    gap: 12,
+    marginBottom: 32,
+  },
   demoButton: {
     height: 56,
     borderRadius: 12,
@@ -255,7 +290,10 @@ const styles = StyleSheet.create({
     borderColor: Colors.cardBorder,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 32,
+  },
+  techDemoButton: {
+    backgroundColor: Colors.primaryAlpha,
+    borderColor: Colors.primary,
   },
   demoButtonText: {
     color: Colors.textSecondary,

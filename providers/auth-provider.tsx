@@ -8,6 +8,7 @@ interface User {
   name: string;
   planType: 'individual' | 'business';
   company?: string;
+  userType: 'client' | 'tech';
 }
 
 interface AuthContextType {
@@ -40,13 +41,26 @@ export const [AuthProvider, useAuth] = createContextHook<AuthContextType>(() => 
   }, [loadUser]);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    // Simulate API call
-    if (email === 'demo@radbiz.com' && password === 'password') {
+    // Simulate API call with demo accounts
+    if (email === 'client@radbiz.com' && password === 'password') {
       const userData: User = {
         id: '1',
-        email: 'demo@radbiz.com',
-        name: 'Demo User',
-        planType: 'individual',
+        email: 'client@radbiz.com',
+        name: 'Demo Client',
+        planType: 'business',
+        company: 'Demo Company Inc.',
+        userType: 'client',
+      };
+      setUser(userData);
+      await AsyncStorage.setItem('user', JSON.stringify(userData));
+    } else if (email === 'tech@radbiz.com' && password === 'password') {
+      const userData: User = {
+        id: '2',
+        email: 'tech@radbiz.com',
+        name: 'RadBiz Tech Consultant',
+        planType: 'business',
+        company: 'RadBiz Consultants',
+        userType: 'tech',
       };
       setUser(userData);
       await AsyncStorage.setItem('user', JSON.stringify(userData));
@@ -63,6 +77,7 @@ export const [AuthProvider, useAuth] = createContextHook<AuthContextType>(() => 
       name,
       planType,
       company,
+      userType: 'client',
     };
     setUser(userData);
     await AsyncStorage.setItem('user', JSON.stringify(userData));

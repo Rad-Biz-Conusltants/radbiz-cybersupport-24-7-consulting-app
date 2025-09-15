@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Alert, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Shield, Mail, Lock, User, ArrowLeft, Building, Monitor } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -88,8 +88,12 @@ export default function SignupScreen() {
             </TouchableOpacity>
 
             <View style={styles.header}>
-              <View style={[styles.logoContainer, { backgroundColor: supportInfo.color + '20' }]}>
-                <supportInfo.icon size={48} color={supportInfo.color} />
+              <View style={styles.logoContainer}>
+                <Image 
+                  source={require('@/assets/images/adaptive-icon.png')} 
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
               </View>
               <Text style={styles.title}>{supportInfo.title}</Text>
               <Text style={styles.subtitle}>{supportInfo.subtitle}</Text>
@@ -242,11 +246,16 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 20,
+    backgroundColor: Colors.cardBackground,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
     borderWidth: 1,
     borderColor: Colors.cardBorder,
+  },
+  logo: {
+    width: 60,
+    height: 60,
   },
   title: {
     fontSize: 28,

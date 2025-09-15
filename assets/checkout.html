@@ -106,12 +106,13 @@
         }
         
         #card-element {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
             border-radius: 8px;
             padding: 16px;
             margin-bottom: 16px;
             color: #ffffff !important;
+            min-height: 50px;
         }
         
         #card-element * {
@@ -120,6 +121,12 @@
         
         #card-element input {
             color: #ffffff !important;
+            background: transparent !important;
+        }
+        
+        #card-element .p-Input {
+            color: #ffffff !important;
+            background: transparent !important;
         }
         
         #card-errors {
@@ -282,30 +289,41 @@
                 rules: {
                     '.Input': {
                         color: '#ffffff !important',
-                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                        border: '1px solid rgba(255, 255, 255, 0.2)'
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                        fontSize: '16px'
                     },
                     '.Input:focus': {
                         border: '1px solid #00FF88',
-                        boxShadow: '0 0 0 1px #00FF88'
+                        boxShadow: '0 0 0 1px #00FF88',
+                        backgroundColor: 'rgba(255, 255, 255, 0.15)'
                     },
                     '.Input::placeholder': {
                         color: '#B0B0B0 !important'
                     },
                     '.Input--invalid': {
-                        color: '#ffffff !important'
+                        color: '#ffffff !important',
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)'
                     },
                     '.Input--complete': {
-                        color: '#ffffff !important'
+                        color: '#ffffff !important',
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)'
                     },
                     '.Label': {
-                        color: '#ffffff'
+                        color: '#ffffff',
+                        fontSize: '14px'
                     },
                     '.Tab': {
                         color: '#ffffff !important'
                     },
                     '.Tab--selected': {
                         color: '#00FF88 !important'
+                    },
+                    '.p-Input': {
+                        color: '#ffffff !important'
+                    },
+                    'input': {
+                        color: '#ffffff !important'
                     }
                 }
             }

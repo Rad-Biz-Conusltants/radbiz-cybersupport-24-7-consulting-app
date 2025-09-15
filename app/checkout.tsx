@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Linking, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Shield, Check, CreditCard, X, Monitor, DollarSign } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/providers/auth-provider';
-import { useSubscription } from '@/providers/subscription-provider';
 import * as WebBrowser from 'expo-web-browser';
 import { Asset } from 'expo-asset';
 
@@ -13,7 +12,6 @@ import Colors from '@/constants/colors';
 
 export default function CheckoutScreen() {
   const { user } = useAuth();
-  const { setSubscription } = useSubscription();
   const { plan: urlPlan } = useLocalSearchParams<{ plan?: string }>();
   const [selectedPlan, setSelectedPlan] = useState<'individual' | 'business' | 'guest'>(urlPlan === 'guest' ? 'guest' : (user?.planType || 'individual'));
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
@@ -158,7 +156,7 @@ export default function CheckoutScreen() {
         {user && (
           <View style={styles.supportTypeHeader}>
             <View style={[styles.supportTypeIcon, { backgroundColor: supportInfo.color + '20' }]}>
-              <supportInfo.icon size={24} color={supportInfo.color} />
+              {React.createElement(supportInfo.icon, { size: 24, color: supportInfo.color })}
             </View>
             <View style={styles.supportTypeInfo}>
               <Text style={styles.supportTypeTitle}>{supportInfo.title}</Text>

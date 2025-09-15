@@ -500,6 +500,10 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
 
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   logo: {
     width: 200,
     height: 200,

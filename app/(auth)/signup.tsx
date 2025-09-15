@@ -5,6 +5,7 @@ import { Shield, Mail, Lock, User, ArrowLeft, Building } from 'lucide-react-nati
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/providers/auth-provider';
+import Colors from '@/constants/colors';
 
 export default function SignupScreen() {
   const [name, setName] = useState('');
@@ -39,7 +40,7 @@ export default function SignupScreen() {
 
   return (
     <LinearGradient
-      colors={['#0F172A', '#1E293B']}
+      colors={[Colors.backgroundStart, Colors.backgroundEnd]}
       style={styles.container}
     >
       <SafeAreaView style={styles.safeArea}>
@@ -61,7 +62,7 @@ export default function SignupScreen() {
 
             <View style={styles.header}>
               <View style={styles.logoContainer}>
-                <Shield size={48} color="#3B82F6" />
+                <Shield size={48} color={Colors.primary} />
               </View>
               <Text style={styles.title}>Create Account</Text>
               <Text style={styles.subtitle}>Start your 14-day free trial</Text>
@@ -73,7 +74,7 @@ export default function SignupScreen() {
                   style={[styles.planOption, planType === 'individual' && styles.planOptionActive]}
                   onPress={() => setPlanType('individual')}
                 >
-                  <User size={20} color={planType === 'individual' ? '#FFFFFF' : '#64748B'} />
+                  <User size={20} color={planType === 'individual' ? Colors.textPrimary : Colors.textMuted} />
                   <Text style={[styles.planOptionText, planType === 'individual' && styles.planOptionTextActive]}>
                     Individual
                   </Text>
@@ -82,7 +83,7 @@ export default function SignupScreen() {
                   style={[styles.planOption, planType === 'business' && styles.planOptionActive]}
                   onPress={() => setPlanType('business')}
                 >
-                  <Building size={20} color={planType === 'business' ? '#FFFFFF' : '#64748B'} />
+                  <Building size={20} color={planType === 'business' ? Colors.textPrimary : Colors.textMuted} />
                   <Text style={[styles.planOptionText, planType === 'business' && styles.planOptionTextActive]}>
                     Business
                   </Text>
@@ -90,11 +91,11 @@ export default function SignupScreen() {
               </View>
 
               <View style={styles.inputContainer}>
-                <User size={20} color="#64748B" style={styles.inputIcon} />
+                <User size={20} color={Colors.textMuted} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   placeholder="Full name"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={Colors.textMuted}
                   value={name}
                   onChangeText={setName}
                   autoComplete="name"
@@ -103,11 +104,11 @@ export default function SignupScreen() {
 
               {planType === 'business' && (
                 <View style={styles.inputContainer}>
-                  <Building size={20} color="#64748B" style={styles.inputIcon} />
+                  <Building size={20} color={Colors.textMuted} style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
                     placeholder="Company name"
-                    placeholderTextColor="#64748B"
+                    placeholderTextColor={Colors.textMuted}
                     value={company}
                     onChangeText={setCompany}
                   />
@@ -115,11 +116,11 @@ export default function SignupScreen() {
               )}
 
               <View style={styles.inputContainer}>
-                <Mail size={20} color="#64748B" style={styles.inputIcon} />
+                <Mail size={20} color={Colors.textMuted} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   placeholder="Email address"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={Colors.textMuted}
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -129,11 +130,11 @@ export default function SignupScreen() {
               </View>
 
               <View style={styles.inputContainer}>
-                <Lock size={20} color="#64748B" style={styles.inputIcon} />
+                <Lock size={20} color={Colors.textMuted} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   placeholder="Password (min 8 characters)"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={Colors.textMuted}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry
@@ -155,7 +156,7 @@ export default function SignupScreen() {
                 disabled={loading}
               >
                 <LinearGradient
-                  colors={['#3B82F6', '#2563EB']}
+                  colors={[Colors.primary, Colors.primaryDark]}
                   style={styles.signupGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
@@ -200,7 +201,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#1E293B',
+    backgroundColor: Colors.cardBackground,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -213,7 +214,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 20,
-    backgroundColor: '#1E293B',
+    backgroundColor: Colors.cardBackground,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
@@ -221,12 +222,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#94A3B8',
+    color: Colors.textSecondary,
     textAlign: 'center',
   },
   form: {
@@ -246,30 +247,30 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#334155',
-    backgroundColor: '#1E293B',
+    borderColor: Colors.cardBorder,
+    backgroundColor: Colors.cardBackground,
   },
   planOptionActive: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   planOptionText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#64748B',
+    color: Colors.textMuted,
   },
   planOptionTextActive: {
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E293B',
+    backgroundColor: Colors.cardBackground,
     borderRadius: 12,
     marginBottom: 16,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.cardBorder,
   },
   inputIcon: {
     marginRight: 12,
@@ -277,7 +278,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: 56,
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
     fontSize: 16,
   },
   termsContainer: {
@@ -286,12 +287,12 @@ const styles = StyleSheet.create({
   },
   termsText: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
   },
   termsLink: {
-    color: '#3B82F6',
+    color: Colors.accent,
     fontWeight: '600',
   },
   signupButton: {
@@ -304,7 +305,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   signupButtonText: {
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
     fontSize: 18,
     fontWeight: '600',
   },
@@ -314,11 +315,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loginText: {
-    color: '#94A3B8',
+    color: Colors.textSecondary,
     fontSize: 14,
   },
   loginLink: {
-    color: '#3B82F6',
+    color: Colors.accent,
     fontSize: 14,
     fontWeight: '600',
   },

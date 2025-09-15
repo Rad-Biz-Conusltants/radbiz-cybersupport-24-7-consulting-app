@@ -5,6 +5,7 @@ import { Shield, Mail, Lock, ArrowLeft } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/providers/auth-provider';
+import Colors from '@/constants/colors';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -21,7 +22,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await signIn(email, password);
-      router.replace('/(tabs)');
+      router.replace('/(tabs)/home');
     } catch (error) {
       Alert.alert('Error', 'Invalid credentials. Try demo@radbiz.com / password');
     } finally {
@@ -31,7 +32,7 @@ export default function LoginScreen() {
 
   return (
     <LinearGradient
-      colors={['#0F172A', '#1E293B']}
+      colors={[Colors.backgroundStart, Colors.backgroundEnd]}
       style={styles.container}
     >
       <SafeAreaView style={styles.safeArea}>
@@ -53,7 +54,7 @@ export default function LoginScreen() {
 
             <View style={styles.header}>
               <View style={styles.logoContainer}>
-                <Shield size={48} color="#3B82F6" />
+                <Shield size={48} color={Colors.primary} />
               </View>
               <Text style={styles.title}>Welcome Back</Text>
               <Text style={styles.subtitle}>Sign in to access your security dashboard</Text>
@@ -61,11 +62,11 @@ export default function LoginScreen() {
 
             <View style={styles.form}>
               <View style={styles.inputContainer}>
-                <Mail size={20} color="#64748B" style={styles.inputIcon} />
+                <Mail size={20} color={Colors.textMuted} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   placeholder="Email address"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={Colors.textMuted}
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -75,11 +76,11 @@ export default function LoginScreen() {
               </View>
 
               <View style={styles.inputContainer}>
-                <Lock size={20} color="#64748B" style={styles.inputIcon} />
+                <Lock size={20} color={Colors.textMuted} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   placeholder="Password"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={Colors.textMuted}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry
@@ -97,7 +98,7 @@ export default function LoginScreen() {
                 disabled={loading}
               >
                 <LinearGradient
-                  colors={['#3B82F6', '#2563EB']}
+                  colors={[Colors.primary, Colors.primaryDark]}
                   style={styles.loginGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
@@ -125,7 +126,7 @@ export default function LoginScreen() {
               </TouchableOpacity>
 
               <View style={styles.signupContainer}>
-                <Text style={styles.signupText}>Don't have an account? </Text>
+                <Text style={styles.signupText}>Don&apos;t have an account? </Text>
                 <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
                   <Text style={styles.signupLink}>Sign Up</Text>
                 </TouchableOpacity>
@@ -158,7 +159,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#1E293B',
+    backgroundColor: Colors.cardBackground,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -171,7 +172,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 20,
-    backgroundColor: '#1E293B',
+    backgroundColor: Colors.cardBackground,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
@@ -179,12 +180,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#94A3B8',
+    color: Colors.textSecondary,
     textAlign: 'center',
   },
   form: {
@@ -193,12 +194,12 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E293B',
+    backgroundColor: Colors.cardBackground,
     borderRadius: 12,
     marginBottom: 16,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.cardBorder,
   },
   inputIcon: {
     marginRight: 12,
@@ -206,7 +207,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: 56,
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
     fontSize: 16,
   },
   forgotPassword: {
@@ -214,7 +215,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   forgotPasswordText: {
-    color: '#3B82F6',
+    color: Colors.accent,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -228,7 +229,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loginText: {
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
     fontSize: 18,
     fontWeight: '600',
   },
@@ -240,10 +241,10 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#334155',
+    backgroundColor: Colors.cardBorder,
   },
   dividerText: {
-    color: '#64748B',
+    color: Colors.textMuted,
     fontSize: 14,
     marginHorizontal: 16,
   },
@@ -251,13 +252,13 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.cardBorder,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 32,
   },
   demoButtonText: {
-    color: '#94A3B8',
+    color: Colors.textSecondary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -267,11 +268,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   signupText: {
-    color: '#94A3B8',
+    color: Colors.textSecondary,
     fontSize: 14,
   },
   signupLink: {
-    color: '#3B82F6',
+    color: Colors.accent,
     fontSize: 14,
     fontWeight: '600',
   },

@@ -5,6 +5,7 @@ import { Shield, AlertCircle, CheckCircle, Clock, TrendingUp, Activity, Zap, Loc
 import { useAuth } from '@/providers/auth-provider';
 import { useSubscription } from '@/providers/subscription-provider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Colors from '@/constants/colors';
 
 export default function DashboardScreen() {
   const { user } = useAuth();
@@ -27,16 +28,16 @@ export default function DashboardScreen() {
 
   const getActivityColor = (type: string) => {
     switch (type) {
-      case 'success': return '#10B981';
-      case 'warning': return '#F59E0B';
-      case 'info': return '#3B82F6';
-      default: return '#64748B';
+      case 'success': return Colors.success;
+      case 'warning': return Colors.warning;
+      case 'info': return Colors.info;
+      default: return Colors.textMuted;
     }
   };
 
   return (
     <LinearGradient
-      colors={['#0F172A', '#1E293B']}
+      colors={[Colors.backgroundStart, Colors.backgroundEnd]}
       style={styles.container}
     >
       <ScrollView 
@@ -57,7 +58,7 @@ export default function DashboardScreen() {
 
         <View style={styles.scoreCard}>
           <LinearGradient
-            colors={['#3B82F6', '#2563EB']}
+            colors={[Colors.primary, Colors.primaryDark]}
             style={styles.scoreGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -76,22 +77,22 @@ export default function DashboardScreen() {
 
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: '#EF444420' }]}>
-              <AlertCircle size={20} color="#EF4444" />
+            <View style={[styles.statIcon, { backgroundColor: Colors.errorAlpha }]}>
+              <AlertCircle size={20} color={Colors.error} />
             </View>
             <Text style={styles.statValue}>{threats.blocked}</Text>
             <Text style={styles.statLabel}>Threats Blocked</Text>
           </View>
           <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: '#10B98120' }]}>
-              <CheckCircle size={20} color="#10B981" />
+            <View style={[styles.statIcon, { backgroundColor: Colors.successAlpha }]}>
+              <CheckCircle size={20} color={Colors.success} />
             </View>
             <Text style={styles.statValue}>{threats.resolved}</Text>
             <Text style={styles.statLabel}>Issues Resolved</Text>
           </View>
           <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: '#F59E0B20' }]}>
-              <Activity size={20} color="#F59E0B" />
+            <View style={[styles.statIcon, { backgroundColor: Colors.warningAlpha }]}>
+              <Activity size={20} color={Colors.warning} />
             </View>
             <Text style={styles.statValue}>{threats.monitoring}</Text>
             <Text style={styles.statLabel}>Active Monitors</Text>
@@ -102,26 +103,26 @@ export default function DashboardScreen() {
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.actionsGrid}>
             <TouchableOpacity style={styles.actionCard}>
-              <View style={[styles.actionIcon, { backgroundColor: '#3B82F620' }]}>
-                <Zap size={24} color="#3B82F6" />
+              <View style={[styles.actionIcon, { backgroundColor: Colors.accentAlpha }]}>
+                <Zap size={24} color={Colors.accent} />
               </View>
               <Text style={styles.actionText}>Quick Scan</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionCard}>
-              <View style={[styles.actionIcon, { backgroundColor: '#8B5CF620' }]}>
-                <Lock size={24} color="#8B5CF6" />
+              <View style={[styles.actionIcon, { backgroundColor: Colors.primaryAlpha }]}>
+                <Lock size={24} color={Colors.primary} />
               </View>
               <Text style={styles.actionText}>Security Audit</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionCard}>
-              <View style={[styles.actionIcon, { backgroundColor: '#10B98120' }]}>
-                <Shield size={24} color="#10B981" />
+              <View style={[styles.actionIcon, { backgroundColor: Colors.successAlpha }]}>
+                <Shield size={24} color={Colors.success} />
               </View>
               <Text style={styles.actionText}>Update Rules</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionCard}>
-              <View style={[styles.actionIcon, { backgroundColor: '#F59E0B20' }]}>
-                <TrendingUp size={24} color="#F59E0B" />
+              <View style={[styles.actionIcon, { backgroundColor: Colors.warningAlpha }]}>
+                <TrendingUp size={24} color={Colors.warning} />
               </View>
               <Text style={styles.actionText}>View Reports</Text>
             </TouchableOpacity>
@@ -143,7 +144,7 @@ export default function DashboardScreen() {
               <View style={styles.activityContent}>
                 <Text style={styles.activityMessage}>{activity.message}</Text>
                 <View style={styles.activityTime}>
-                  <Clock size={12} color="#64748B" />
+                  <Clock size={12} color={Colors.textMuted} />
                   <Text style={styles.activityTimeText}>{activity.time}</Text>
                 </View>
               </View>
@@ -169,12 +170,12 @@ const styles = StyleSheet.create({
   welcomeText: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
     marginBottom: 4,
   },
   planText: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: Colors.textSecondary,
   },
   scoreCard: {
     marginBottom: 24,
@@ -193,12 +194,12 @@ const styles = StyleSheet.create({
   scoreTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
   },
   scoreValue: {
     fontSize: 48,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
     marginBottom: 12,
   },
   scoreBar: {
@@ -214,7 +215,7 @@ const styles = StyleSheet.create({
   },
   scoreStatus: {
     fontSize: 14,
-    color: '#E2E8F0',
+    color: Colors.textSecondary,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -223,12 +224,12 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#1E293B',
+    backgroundColor: Colors.cardBackground,
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.cardBorder,
   },
   statIcon: {
     width: 40,
@@ -241,12 +242,12 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: Colors.textSecondary,
     textAlign: 'center',
   },
   quickActions: {
@@ -255,7 +256,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
     marginBottom: 16,
   },
   actionsGrid: {
@@ -265,12 +266,12 @@ const styles = StyleSheet.create({
   },
   actionCard: {
     width: '48%',
-    backgroundColor: '#1E293B',
+    backgroundColor: Colors.cardBackground,
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.cardBorder,
   },
   actionIcon: {
     width: 56,
@@ -283,7 +284,7 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
   },
   activitySection: {
     marginBottom: 20,
@@ -296,18 +297,18 @@ const styles = StyleSheet.create({
   },
   viewAllText: {
     fontSize: 14,
-    color: '#3B82F6',
+    color: Colors.accent,
     fontWeight: '600',
   },
   activityItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E293B',
+    backgroundColor: Colors.cardBackground,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.cardBorder,
   },
   activityIconContainer: {
     width: 40,
@@ -323,7 +324,7 @@ const styles = StyleSheet.create({
   activityMessage: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
     marginBottom: 4,
   },
   activityTime: {
@@ -333,10 +334,10 @@ const styles = StyleSheet.create({
   },
   activityTimeText: {
     fontSize: 12,
-    color: '#64748B',
+    color: Colors.textMuted,
   },
   businessBadge: {
-    backgroundColor: '#10B98120',
+    backgroundColor: Colors.successAlpha,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
@@ -346,6 +347,6 @@ const styles = StyleSheet.create({
   businessBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#10B981',
+    color: Colors.success,
   },
 });

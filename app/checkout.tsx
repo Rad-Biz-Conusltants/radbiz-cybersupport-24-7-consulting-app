@@ -6,6 +6,7 @@ import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/providers/auth-provider';
 import { useSubscription } from '@/providers/subscription-provider';
+import Colors from '@/constants/colors';
 
 export default function CheckoutScreen() {
   const { user } = useAuth();
@@ -85,7 +86,7 @@ export default function CheckoutScreen() {
               });
               
               Alert.alert('Success!', 'Your subscription is now active.', [
-                { text: 'OK', onPress: () => router.replace('/(tabs)') }
+                { text: 'OK', onPress: () => router.replace('/(tabs)/home') }
               ]);
             },
           },
@@ -100,7 +101,7 @@ export default function CheckoutScreen() {
 
   return (
     <LinearGradient
-      colors={['#0F172A', '#1E293B']}
+      colors={[Colors.backgroundStart, Colors.backgroundEnd]}
       style={styles.container}
     >
       <SafeAreaView style={styles.safeArea}>
@@ -157,7 +158,7 @@ export default function CheckoutScreen() {
             <View style={styles.featuresContainer}>
               {plans.individual.features.map((feature) => (
                 <View key={feature} style={styles.feature}>
-                  <Check size={16} color="#10B981" />
+                  <Check size={16} color={Colors.success} />
                   <Text style={styles.featureText}>{feature}</Text>
                 </View>
               ))}
@@ -186,7 +187,7 @@ export default function CheckoutScreen() {
             <View style={styles.featuresContainer}>
               {plans.business.features.map((feature) => (
                 <View key={feature} style={styles.feature}>
-                  <Check size={16} color="#10B981" />
+                  <Check size={16} color={Colors.success} />
                   <Text style={styles.featureText}>{feature}</Text>
                 </View>
               ))}
@@ -226,7 +227,7 @@ export default function CheckoutScreen() {
             disabled={loading}
           >
             <LinearGradient
-              colors={['#3B82F6', '#2563EB']}
+              colors={[Colors.primary, Colors.primaryDark]}
               style={styles.checkoutGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
@@ -239,7 +240,7 @@ export default function CheckoutScreen() {
           </TouchableOpacity>
 
           <View style={styles.securityNote}>
-            <Shield size={16} color="#64748B" />
+            <Shield size={16} color={Colors.textMuted} />
             <Text style={styles.securityText}>
               Secure payment powered by Stripe. Cancel anytime.
             </Text>

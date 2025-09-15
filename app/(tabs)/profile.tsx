@@ -6,6 +6,7 @@ import { User, Mail, Building, CreditCard, Bell, Shield, LogOut, ChevronRight, C
 import { router } from 'expo-router';
 import { useAuth } from '@/providers/auth-provider';
 import { useSubscription } from '@/providers/subscription-provider';
+import Colors from '@/constants/colors';
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
@@ -67,7 +68,7 @@ export default function ProfileScreen() {
 
   return (
     <LinearGradient
-      colors={['#0F172A', '#1E293B']}
+      colors={[Colors.backgroundStart, Colors.backgroundEnd]}
       style={styles.container}
     >
       <ScrollView 
@@ -81,7 +82,7 @@ export default function ProfileScreen() {
           <Text style={styles.userName}>{user?.name || 'User'}</Text>
           <Text style={styles.userEmail}>{user?.email || 'user@example.com'}</Text>
           <View style={styles.planBadge}>
-            <Crown size={14} color="#F59E0B" />
+            <Crown size={14} color={Colors.warning} />
             <Text style={styles.planBadgeText}>
               {subscription?.plan === 'business' ? 'Business' : 'Individual'} Plan
             </Text>
@@ -101,7 +102,7 @@ export default function ProfileScreen() {
                 >
                   <View style={styles.settingLeft}>
                     <View style={styles.settingIcon}>
-                      <item.icon size={20} color="#3B82F6" />
+                      <item.icon size={20} color={Colors.accent} />
                     </View>
                     <View style={styles.settingInfo}>
                       <Text style={styles.settingLabel}>{item.label}</Text>
@@ -111,7 +112,7 @@ export default function ProfileScreen() {
                     </View>
                   </View>
                   {'action' in item && (
-                    <ChevronRight size={20} color="#64748B" />
+                    <ChevronRight size={20} color={Colors.textMuted} />
                   )}
                 </TouchableOpacity>
               ))}
@@ -120,7 +121,7 @@ export default function ProfileScreen() {
         ))}
 
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-          <LogOut size={20} color="#EF4444" />
+          <LogOut size={20} color={Colors.error} />
           <Text style={styles.signOutText}>Sign Out</Text>
         </TouchableOpacity>
 
@@ -149,7 +150,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#3B82F6',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -157,19 +158,19 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
     marginBottom: 4,
   },
   userEmail: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: Colors.textSecondary,
     marginBottom: 12,
   },
   planBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#F59E0B20',
+    backgroundColor: Colors.warningAlpha,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -177,7 +178,7 @@ const styles = StyleSheet.create({
   planBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#F59E0B',
+    color: Colors.warning,
   },
   section: {
     marginBottom: 24,
@@ -185,16 +186,16 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#94A3B8',
+    color: Colors.textSecondary,
     marginBottom: 12,
     marginLeft: 4,
   },
   sectionContent: {
-    backgroundColor: '#1E293B',
+    backgroundColor: Colors.cardBackground,
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.cardBorder,
   },
   settingItem: {
     flexDirection: 'row',
@@ -202,7 +203,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#334155',
+    borderBottomColor: Colors.cardBorder,
   },
   settingLeft: {
     flexDirection: 'row',
@@ -213,7 +214,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: '#3B82F620',
+    backgroundColor: Colors.accentAlpha,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -224,29 +225,29 @@ const styles = StyleSheet.create({
   settingLabel: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
     marginBottom: 2,
   },
   settingValue: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: Colors.textSecondary,
   },
   signOutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#1E293B',
+    backgroundColor: Colors.cardBackground,
     borderRadius: 12,
     padding: 16,
     marginTop: 8,
     borderWidth: 1,
-    borderColor: '#EF4444',
+    borderColor: Colors.error,
   },
   signOutText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#EF4444',
+    color: Colors.error,
   },
   footer: {
     alignItems: 'center',
@@ -254,11 +255,11 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
-    color: '#64748B',
+    color: Colors.textMuted,
     marginBottom: 4,
   },
   footerSubtext: {
     fontSize: 12,
-    color: '#475569',
+    color: Colors.textMuted,
   },
 });

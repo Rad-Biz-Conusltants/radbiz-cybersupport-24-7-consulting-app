@@ -28,6 +28,8 @@ interface User {
   name: string;
   planType: 'individual' | 'business';
   company?: string;
+  phone?: string;
+  address?: string;
   userType: 'client' | 'tech';
   createdAt?: string;
   updatedAt?: string;
@@ -43,6 +45,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string, planType: 'individual' | 'business', company?: string) => Promise<void>;
   signOut: () => Promise<void>;
+  updateProfile: (updates: Partial<User>) => Promise<void>;
   isDemoMode: boolean;
 }
 
@@ -237,12 +240,45 @@ export const [AuthProvider, useAuth] = createContextHook<AuthContextType>(() => 
     }
   }, []);
 
+  const updateProfile = useCallback(async (updates: Partial<User>) => {
+    if (!user) {
+      throw new Error('No user logged in');
+    }
+
+    try {
+      const updatedUser = {
+        ...user,
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      };
+
+      if (!IS_DEMO) {
+        // Update in Firestore
+        await setDoc(doc(db, 'users', user.id), updatedUser, { merge: true });
+        
+        // Also update in the appropriate collection
+        const collectionName = user.planType === 'individual' ? 'individual_users' : 'business_users';
+        await setDoc(doc(db, collectionName, user.id), updatedUser, { merge: true });
+      }
+
+      // Update local state and AsyncStorage
+      setUser(updatedUser);
+      await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+      
+      console.log('Profile updated successfully');
+    } catch (error) {
+      console.error('Update profile error:', error);
+      throw new Error('Failed to update profile');
+    }
+  }, [user]);
+
   return useMemo(() => ({
     user,
     isLoading,
     signIn,
     signUp,
     signOut,
+    updateProfile,
     isDemoMode: IS_DEMO,
-  }), [user, isLoading, signIn, signUp, signOut]);
+  }), [user, isLoading, signIn, signUp, signOut, updateProfile]);
 });

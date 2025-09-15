@@ -53,15 +53,15 @@ export default function ProfileScreen() {
   };
 
   const handleEditProfile = () => {
-    Alert.alert('Edit Profile', 'Profile editing functionality coming soon.');
+    router.push('/profile/edit');
   };
 
   const handleNotifications = () => {
-    Alert.alert('Notifications', 'Notification settings coming soon.');
+    router.push('/profile/notifications');
   };
 
   const handleBilling = () => {
-    router.push('/credits/add');
+    router.push('/profile/billing');
   };
 
   const handleSupport = () => {

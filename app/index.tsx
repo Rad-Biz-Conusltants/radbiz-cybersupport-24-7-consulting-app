@@ -186,8 +186,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   logoImage: {
-    width: 60,
-    height: 60,
+    width: 200,
+    height: 200,
   },
   logoText: {
     fontSize: 20,

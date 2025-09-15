@@ -1,12 +1,13 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Shield, Monitor, ArrowRight, CheckCircle, Clock, Users, Ticket, AlertTriangle, DollarSign, Plus, Eye, MapPin, Calendar } from 'lucide-react-native';
+import { Shield, Monitor, ArrowRight, CheckCircle, Clock, Users, Ticket, AlertTriangle, DollarSign, Plus, Eye, MapPin, Calendar, TestTube } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
 import { useTickets } from '@/providers/tickets-provider';
+import { IS_DEMO } from '@/constants/environment';
 
 function ClientDashboard() {
   const { user } = useAuth();
@@ -78,6 +79,14 @@ function ClientDashboard() {
         contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20 }]}
         showsVerticalScrollIndicator={false}
       >
+        {/* Demo Mode Banner */}
+        {IS_DEMO && (
+          <View style={styles.demoBanner}>
+            <TestTube size={16} color={Colors.warning} />
+            <Text style={styles.demoText}>Demo Mode - All data is simulated</Text>
+          </View>
+        )}
+        
         {/* Header */}
         <View style={styles.dashboardHeader}>
           <Image 
@@ -914,5 +923,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginTop: 8,
+  },
+  demoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.warningAlpha,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: Colors.warning + '40',
+  },
+  demoText: {
+    color: Colors.warning,
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 6,
   },
 });

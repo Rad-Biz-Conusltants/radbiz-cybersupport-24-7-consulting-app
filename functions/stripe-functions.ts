@@ -1,5 +1,6 @@
 // Mock Backend Functions for Stripe Integration
 // These are frontend mock implementations for development
+import { STRIPE_CONFIG, FEATURES, IS_DEMO } from '@/constants/environment';
 
 // Mock Stripe types and functions
 type MockStripe = {
@@ -28,8 +29,8 @@ type MockStripe = {
   };
 };
 
-// Mock Stripe implementation
-const stripe: MockStripe = {
+// Mock Stripe implementation for demo mode
+const mockStripe: MockStripe = {
   checkout: {
     sessions: {
       create: async (params) => ({
@@ -77,6 +78,9 @@ const stripe: MockStripe = {
     })
   }
 };
+
+// Use mock stripe in demo mode, real stripe in production
+const stripe = IS_DEMO ? mockStripe : mockStripe; // In real implementation, this would be the actual Stripe instance
 
 // Credit Package Definitions
 const CREDIT_PACKAGES = {
@@ -157,6 +161,15 @@ export async function createCreditCheckout(request: {
       throw new Error('Invalid package ID');
     }
 
+    if (IS_DEMO && FEATURES.mockPayments) {
+      console.log('Demo mode: Creating mock credit checkout');
+      return {
+        success: true,
+        checkoutUrl: `demo://checkout/credits?package=${packageId}&credits=${packageData.credits}&bonus=${packageData.bonus}`,
+        sessionId: `demo_session_${Date.now()}`,
+      };
+    }
+
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -221,6 +234,15 @@ export async function createSubscriptionCheckout(request: {
     
     if (!planData) {
       throw new Error('Invalid subscription plan');
+    }
+
+    if (IS_DEMO && FEATURES.mockPayments) {
+      console.log('Demo mode: Creating mock subscription checkout');
+      return {
+        success: true,
+        checkoutUrl: `demo://checkout/subscription?plan=${plan}&cycle=${billingCycle}`,
+        sessionId: `demo_sub_session_${Date.now()}`,
+      };
     }
 
     // Create or retrieve customer
@@ -330,6 +352,41 @@ export async function verifyPurchase(request: {
 }) {
   try {
     const { sessionId, userId } = request;
+    
+    if (IS_DEMO && FEATURES.mockPayments) {
+      console.log('Demo mode: Verifying mock purchase');
+      
+      if (sessionId.includes('demo_sub_session')) {
+        return {
+          success: true,
+          subscriptionDetails: {
+            sessionId,
+            subscriptionId: 'demo_sub_' + Date.now(),
+            customerId: 'demo_customer_' + Date.now(),
+            plan: 'individual',
+            billingCycle: 'monthly',
+            status: 'trial',
+            trialEndDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+            nextBillingDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+            amount: 29.99,
+            createdAt: new Date().toISOString(),
+          },
+        };
+      } else {
+        return {
+          success: true,
+          purchaseDetails: {
+            sessionId,
+            packageName: 'Demo Package',
+            credits: 10,
+            bonus: 0,
+            totalCredits: 10,
+            amount: 100,
+            purchaseDate: new Date().toLocaleDateString(),
+          },
+        };
+      }
+    }
     
     // Retrieve the checkout session
     const session = await stripe.checkout.sessions.retrieve(sessionId, {

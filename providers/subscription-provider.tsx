@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import createContextHook from '@nkzw/create-context-hook';
+import { FEATURES, IS_DEMO } from '@/constants/environment';
 
 interface Subscription {
   plan: 'individual' | 'business';
@@ -25,6 +26,7 @@ interface SubscriptionContextType {
     daysUntilExpiry: number;
     displayStatus: string;
   };
+  isDemoMode: boolean;
 }
 
 export const [SubscriptionProvider, useSubscription] = createContextHook<SubscriptionContextType>(() => {
@@ -57,6 +59,23 @@ export const [SubscriptionProvider, useSubscription] = createContextHook<Subscri
   }, []);
 
   const createSubscription = useCallback(async (plan: 'individual' | 'business', billingCycle: 'monthly' | 'yearly') => {
+    if (IS_DEMO && FEATURES.mockPayments) {
+      console.log('Demo mode: Creating mock subscription');
+      const mockSubscription: Subscription = {
+        plan,
+        billingCycle,
+        status: 'trial',
+        nextBillingDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(), // 14 days from now
+        trialEndDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+        subscriptionId: 'demo-sub-' + Date.now(),
+        customerId: 'demo-customer-' + Date.now(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      await setSubscription(mockSubscription);
+      return 'demo://checkout/success';
+    }
+    
     try {
       const response = await fetch('https://toolkit.rork.com/stripe/create-subscription', {
         method: 'POST',
@@ -82,7 +101,7 @@ export const [SubscriptionProvider, useSubscription] = createContextHook<Subscri
       console.error('Subscription creation error:', error);
       throw error;
     }
-  }, []);
+  }, [setSubscription]);
 
   const getSubscriptionStatus = useCallback(() => {
     if (!subscription) {
@@ -126,5 +145,6 @@ export const [SubscriptionProvider, useSubscription] = createContextHook<Subscri
     cancelSubscription,
     createSubscription,
     getSubscriptionStatus,
+    isDemoMode: IS_DEMO,
   }), [subscription, setSubscription, cancelSubscription, createSubscription, getSubscriptionStatus]);
 });

@@ -5,27 +5,22 @@ import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Platform } from 'react-native';
+import { FIREBASE_CONFIG, FEATURES, IS_DEMO } from '@/constants/environment';
 
-// Firebase configuration - Replace with your actual Firebase project credentials
-const firebaseConfig = {
-  apiKey: "YOUR_ACTUAL_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
+// Initialize Firebase only in production mode
+let app: any = null;
+let auth: any = null;
+let db: any = null;
 
-// Initialize Firebase
-let app;
-if (getApps().length === 0) {
-  app = initializeApp(firebaseConfig);
-} else {
-  app = getApps()[0];
+if (!IS_DEMO) {
+  if (getApps().length === 0) {
+    app = initializeApp(FIREBASE_CONFIG);
+  } else {
+    app = getApps()[0];
+  }
+  auth = getAuth(app);
+  db = getFirestore(app);
 }
-
-const auth = getAuth(app);
-const db = getFirestore(app);
 
 interface User {
   id: string;
@@ -48,6 +43,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string, planType: 'individual' | 'business', company?: string) => Promise<void>;
   signOut: () => Promise<void>;
+  isDemoMode: boolean;
 }
 
 export const [AuthProvider, useAuth] = createContextHook<AuthContextType>(() => {
@@ -56,6 +52,11 @@ export const [AuthProvider, useAuth] = createContextHook<AuthContextType>(() => 
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
 
   const loadUserFromFirestore = useCallback(async (firebaseUser: FirebaseUser) => {
+    if (IS_DEMO) {
+      console.log('Demo mode: Skipping Firestore user load');
+      return;
+    }
+    
     try {
       const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
       if (userDoc.exists()) {
@@ -87,6 +88,12 @@ export const [AuthProvider, useAuth] = createContextHook<AuthContextType>(() => 
   useEffect(() => {
     loadUser();
     
+    if (IS_DEMO) {
+      console.log('Demo mode: Skipping Firebase auth listener');
+      setIsLoading(false);
+      return;
+    }
+    
     // Set up Firebase auth state listener
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       console.log('Firebase auth state changed:', firebaseUser?.email);
@@ -106,6 +113,26 @@ export const [AuthProvider, useAuth] = createContextHook<AuthContextType>(() => 
   }, [loadUser, loadUserFromFirestore]);
 
   const signIn = useCallback(async (email: string, password: string) => {
+    if (IS_DEMO && FEATURES.authBypass) {
+      console.log('Demo mode: Bypassing Firebase auth for sign in');
+      const demoUser: User = {
+        id: 'demo-user-' + Date.now(),
+        email,
+        name: 'Demo User',
+        planType: 'individual',
+        userType: 'client',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        accountBalance: {
+          ticketBalance: 100,
+          totalTickets: 0,
+        },
+      };
+      setUser(demoUser);
+      await AsyncStorage.setItem('user', JSON.stringify(demoUser));
+      return;
+    }
+    
     try {
       console.log('Attempting to sign in with:', email);
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -118,6 +145,27 @@ export const [AuthProvider, useAuth] = createContextHook<AuthContextType>(() => 
   }, []);
 
   const signUp = useCallback(async (email: string, password: string, name: string, planType: 'individual' | 'business', company?: string) => {
+    if (IS_DEMO && FEATURES.authBypass) {
+      console.log('Demo mode: Bypassing Firebase auth for sign up');
+      const demoUser: User = {
+        id: 'demo-user-' + Date.now(),
+        email,
+        name,
+        planType,
+        company,
+        userType: 'client',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        accountBalance: {
+          ticketBalance: 100,
+          totalTickets: 0,
+        },
+      };
+      setUser(demoUser);
+      await AsyncStorage.setItem('user', JSON.stringify(demoUser));
+      return;
+    }
+    
     try {
       console.log('Creating Firebase user:', email);
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -174,7 +222,11 @@ export const [AuthProvider, useAuth] = createContextHook<AuthContextType>(() => 
   const signOut = useCallback(async () => {
     try {
       console.log('Signing out user');
-      await firebaseSignOut(auth);
+      
+      if (!IS_DEMO) {
+        await firebaseSignOut(auth);
+      }
+      
       setUser(null);
       setFirebaseUser(null);
       await AsyncStorage.removeItem('user');
@@ -191,5 +243,6 @@ export const [AuthProvider, useAuth] = createContextHook<AuthContextType>(() => 
     signIn,
     signUp,
     signOut,
+    isDemoMode: IS_DEMO,
   }), [user, isLoading, signIn, signUp, signOut]);
 });

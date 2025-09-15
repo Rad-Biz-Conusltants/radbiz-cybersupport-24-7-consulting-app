@@ -88,13 +88,11 @@ export default function SignupScreen() {
             </TouchableOpacity>
 
             <View style={styles.header}>
-              <View style={styles.logoContainer}>
-                <Image 
-                  source={require('@/assets/images/adaptive-icon.png')} 
-                  style={styles.logo}
-                  resizeMode="contain"
-                />
-              </View>
+              <Image 
+                source={require('@/assets/images/adaptive-icon.png')} 
+                style={styles.logo}
+                resizeMode="contain"
+              />
               <Text style={styles.title}>{supportInfo.title}</Text>
               <Text style={styles.subtitle}>{supportInfo.subtitle}</Text>
               <Text style={styles.trialText}>Start your 14-day free trial</Text>
@@ -242,20 +240,10 @@ const styles = StyleSheet.create({
     marginTop: 40,
     marginBottom: 40,
   },
-  logoContainer: {
+  logo: {
     width: 140,
     height: 140,
-    borderRadius: 20,
-    backgroundColor: Colors.cardBackground,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-  },
-  logo: {
-    width: 120,
-    height: 120,
   },
   title: {
     fontSize: 28,

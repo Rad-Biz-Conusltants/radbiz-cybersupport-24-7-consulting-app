@@ -53,13 +53,11 @@ export default function LoginScreen() {
             </TouchableOpacity>
 
             <View style={styles.header}>
-              <View style={styles.logoContainer}>
-                <Image 
-                  source={require('@/assets/images/adaptive-icon.png')} 
-                  style={styles.logo}
-                  resizeMode="contain"
-                />
-              </View>
+              <Image 
+                source={require('@/assets/images/adaptive-icon.png')} 
+                style={styles.logo}
+                resizeMode="contain"
+              />
               <Text style={styles.title}>Welcome Back</Text>
               <Text style={styles.subtitle}>Sign in to access your security dashboard</Text>
             </View>
@@ -195,18 +193,10 @@ const styles = StyleSheet.create({
     marginTop: 40,
     marginBottom: 40,
   },
-  logoContainer: {
+  logo: {
     width: 140,
     height: 140,
-    borderRadius: 20,
-    backgroundColor: Colors.cardBackground,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginBottom: 24,
-  },
-  logo: {
-    width: 120,
-    height: 120,
   },
   title: {
     fontSize: 32,

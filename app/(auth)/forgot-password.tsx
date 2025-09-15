@@ -119,13 +119,11 @@ export default function ForgotPasswordScreen() {
             </TouchableOpacity>
 
             <View style={styles.header}>
-              <View style={styles.logoContainer}>
-                <Image 
-                  source={require('@/assets/images/adaptive-icon.png')} 
-                  style={styles.logo}
-                  resizeMode="contain"
-                />
-              </View>
+              <Image 
+                source={require('@/assets/images/adaptive-icon.png')} 
+                style={styles.logo}
+                resizeMode="contain"
+              />
               <Text style={styles.title}>Forgot Password?</Text>
               <Text style={styles.subtitle}>
                 No worries! Enter your email address and we'll send you a link to reset your password.
@@ -217,18 +215,10 @@ const styles = StyleSheet.create({
     marginTop: 60,
     marginBottom: 40,
   },
-  logoContainer: {
+  logo: {
     width: 140,
     height: 140,
-    borderRadius: 20,
-    backgroundColor: Colors.cardBackground,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginBottom: 24,
-  },
-  logo: {
-    width: 120,
-    height: 120,
   },
   title: {
     fontSize: 32,

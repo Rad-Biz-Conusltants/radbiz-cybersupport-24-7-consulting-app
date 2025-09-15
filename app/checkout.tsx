@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Linking, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Shield, Check, CreditCard, X, Monitor, DollarSign } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/providers/auth-provider';
 import { useSubscription } from '@/providers/subscription-provider';
+import { createSubscriptionCheckout } from '@/functions/stripe-functions';
 import Colors from '@/constants/colors';
 
 export default function CheckoutScreen() {
@@ -81,61 +82,57 @@ export default function CheckoutScreen() {
   const supportInfo = getSupportTypeInfo();
 
   const handleCheckout = async () => {
+    if (!user?.email) {
+      Alert.alert('Error', 'User email is required for checkout');
+      return;
+    }
+
     setLoading(true);
     
     try {
-      let alertMessage = '';
-      let planName = '';
-      
       if (isGuestPlan) {
-        planName = 'Guest Support';
-        alertMessage = `You would be redirected to Stripe to complete payment for:\n\n${planName}\n${(currentPlan as typeof plans.guest).deposit} deposit + ${(currentPlan as typeof plans.guest).hourly}/hour\n\nFor demo purposes, we'll simulate a successful payment.`;
+        // For guest plan, simulate payment for now
+        Alert.alert('Payment Successful!', 'Your guest support session is ready. You can now get immediate help.', [
+          { text: 'Start Getting Support', onPress: () => router.replace('/(tabs)/support') }
+        ]);
       } else {
-        planName = selectedPlan === 'individual' ? 'Individual' : 'Small Business Pro';
-        alertMessage = `You would be redirected to Stripe to complete payment for:\n\n${planName} Plan\n${price}/${billingCycle === 'monthly' ? 'month' : 'year'}\n\nFor demo purposes, we'll simulate a successful payment.`;
+        // Create Stripe checkout session for subscription
+        const result = await createSubscriptionCheckout({
+          plan: selectedPlan as 'individual' | 'business',
+          billingCycle,
+          userId: user.id,
+          userEmail: user.email,
+          returnUrl: `${Platform.OS === 'web' ? window.location.origin : 'exp://'}/(tabs)/home?checkout=success`,
+          cancelUrl: `${Platform.OS === 'web' ? window.location.origin : 'exp://'}/(tabs)/home?checkout=cancelled`,
+        });
+
+        if (result.success && result.checkoutUrl) {
+          // Open Stripe checkout in browser
+          const supported = await Linking.canOpenURL(result.checkoutUrl);
+          if (supported) {
+            await Linking.openURL(result.checkoutUrl);
+            
+            // Set subscription as trial while waiting for webhook confirmation
+            setSubscription({
+              plan: selectedPlan as 'individual' | 'business',
+              billingCycle,
+              status: 'trial',
+              nextBillingDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(), // 14 days trial
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            });
+            
+            // Navigate to success page
+            router.replace('/subscription/success');
+          } else {
+            Alert.alert('Error', 'Cannot open checkout URL');
+          }
+        } else {
+          Alert.alert('Error', result.error || 'Failed to create checkout session');
+        }
       }
-      
-      Alert.alert(
-        'Stripe Checkout',
-        alertMessage,
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-          {
-            text: 'Continue to Stripe',
-            onPress: async () => {
-              // Simulate successful payment
-              await new Promise((resolve) => {
-                if (typeof resolve === 'function') {
-                  setTimeout(resolve, 1500);
-                }
-              });
-              
-              if (isGuestPlan) {
-                Alert.alert('Payment Successful!', 'Your guest support session is ready. You can now get immediate help.', [
-                  { text: 'Start Getting Support', onPress: () => router.replace('/(tabs)/support') }
-                ]);
-              } else {
-                setSubscription({
-                  plan: selectedPlan as 'individual' | 'business',
-                  billingCycle,
-                  status: 'active',
-                  nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-                  createdAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString(),
-                });
-                
-                Alert.alert('Success!', 'Your subscription is now active. Start getting support now!', [
-                  { text: 'Start Getting Support', onPress: () => router.replace('/(tabs)/support') }
-                ]);
-              }
-            },
-          },
-        ]
-      );
-    } catch {
+    } catch (error) {
+      console.error('Checkout error:', error);
       Alert.alert('Error', 'Failed to process payment. Please try again.');
     } finally {
       setLoading(false);

@@ -670,6 +670,7 @@ const styles = StyleSheet.create({
   dashboardLogo: {
     width: 50,
     height: 50,
+    borderRadius: 0,
   },
   headerInfo: {
     flex: 1,

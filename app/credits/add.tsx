@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, CreditCard, DollarSign, Zap, Star, CheckCircle } from 'lucide-react-native';
+import { ArrowLeft, CreditCard, Zap, Star, CheckCircle, Ticket } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
@@ -128,7 +128,7 @@ export default function AddCreditsScreen() {
           >
             <View style={styles.balanceHeader}>
               <View style={[styles.balanceIcon, { backgroundColor: Colors.primaryAlpha }]}>
-                <DollarSign size={24} color={Colors.primary} />
+                <Ticket size={24} color={Colors.primary} />
               </View>
               <View style={styles.balanceInfo}>
                 <Text style={styles.balanceLabel}>Account Ticket Balance</Text>

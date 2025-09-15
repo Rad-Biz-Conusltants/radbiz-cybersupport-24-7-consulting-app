@@ -70,7 +70,7 @@ const config: EnvironmentConfig = {
   stripe: {
     publishableKey: isProduction 
       ? 'pk_live_your_live_key' 
-      : 'pk_test_your_test_key',
+      : 'pk_test_51S7iP8DkNhm5wLGgx2QJNtHD9vz2jyv03kSfusRYMZAbA2ZBYlI1phQDDkV5g9gfNAHBdZxVDDAMiliGCfd1TKI300diGvsWOO',
   },
   features: {
     authBypass: isDemoMode,

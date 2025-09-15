@@ -6,6 +6,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
+import { useTickets } from '@/providers/tickets-provider';
 
 interface CreditPackage {
   id: string;
@@ -19,22 +20,24 @@ interface CreditPackage {
 
 export default function AddCreditsScreen() {
   const { user } = useAuth();
+  const { addCredits, accountBalance } = useTickets();
   const insets = useSafeAreaInsets();
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const creditPackages: CreditPackage[] = [
     {
       id: 'starter',
       name: 'Starter Pack',
       credits: 10,
-      price: 99,
+      price: 100,
       description: 'Perfect for small teams'
     },
     {
       id: 'professional',
       name: 'Professional Pack',
-      credits: 25,
-      price: 199,
+      credits: 30,
+      price: 250,
       bonus: 5,
       popular: true,
       description: 'Most popular choice'
@@ -42,21 +45,21 @@ export default function AddCreditsScreen() {
     {
       id: 'enterprise',
       name: 'Enterprise Pack',
-      credits: 50,
-      price: 349,
+      credits: 65,
+      price: 500,
       bonus: 15,
       description: 'Best value for large teams'
     },
     {
       id: 'unlimited',
-      name: 'Unlimited Monthly',
-      credits: 999,
-      price: 599,
-      description: 'Unlimited tickets for 30 days'
+      name: 'Premium Monthly',
+      credits: 150,
+      price: 1000,
+      description: 'Maximum tickets for enterprise'
     }
   ];
 
-  const handlePurchase = () => {
+  const handlePurchase = async () => {
     if (!selectedPackage) {
       Alert.alert('No Package Selected', 'Please select a credit package to continue.');
       return;
@@ -67,17 +70,30 @@ export default function AddCreditsScreen() {
 
     Alert.alert(
       'Confirm Purchase',
-      `Purchase ${pkg.name} for $${pkg.price}?\n\nThis will add ${pkg.credits}${pkg.bonus ? ` + ${pkg.bonus} bonus` : ''} tickets to your account.`,
+      `Purchase ${pkg.name} for ${pkg.price}?\n\nThis will add ${pkg.credits}${pkg.bonus ? ` + ${pkg.bonus} bonus` : ''} tickets to your account.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Purchase',
-          onPress: () => {
-            Alert.alert(
-              'Purchase Successful',
-              `${pkg.credits}${pkg.bonus ? ` + ${pkg.bonus} bonus` : ''} tickets have been added to your account.`,
-              [{ text: 'OK', onPress: () => router.back() }]
-            );
+          onPress: async () => {
+            setIsProcessing(true);
+            try {
+              // Simulate payment processing
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              
+              // Add credits to account
+              await addCredits(pkg.price);
+              
+              Alert.alert(
+                'Purchase Successful',
+                `${pkg.price} has been added to your account. You now have ${pkg.credits}${pkg.bonus ? ` + ${pkg.bonus} bonus` : ''} additional support tickets.`,
+                [{ text: 'OK', onPress: () => router.back() }]
+              );
+            } catch (error) {
+              Alert.alert('Error', 'Failed to process payment. Please try again.');
+            } finally {
+              setIsProcessing(false);
+            }
           }
         }
       ]
@@ -115,14 +131,19 @@ export default function AddCreditsScreen() {
               </View>
               <View style={styles.balanceInfo}>
                 <Text style={styles.balanceLabel}>Current Balance</Text>
-                <Text style={styles.balanceValue}>$850</Text>
+                <Text style={styles.balanceValue}>${accountBalance.balance}</Text>
               </View>
             </View>
             <View style={styles.balanceDetails}>
-              <Text style={styles.balanceText}>15 tickets used out of 100 available</Text>
+              <Text style={styles.balanceText}>
+                {accountBalance.usedTickets} tickets used out of {accountBalance.totalTickets} available
+              </Text>
               <View style={styles.usageBar}>
                 <View style={styles.usageBarBackground}>
-                  <View style={[styles.usageBarFill, { width: '15%' }]} />
+                  <View style={[
+                    styles.usageBarFill, 
+                    { width: `${(accountBalance.usedTickets / accountBalance.totalTickets) * 100}%` }
+                  ]} />
                 </View>
               </View>
             </View>
@@ -229,9 +250,9 @@ export default function AddCreditsScreen() {
 
       <View style={[styles.purchaseContainer, { paddingBottom: insets.bottom + 20 }]}>
         <TouchableOpacity 
-          style={[styles.purchaseButton, { opacity: selectedPackage ? 1 : 0.5 }]}
+          style={[styles.purchaseButton, { opacity: (selectedPackage && !isProcessing) ? 1 : 0.5 }]}
           onPress={handlePurchase}
-          disabled={!selectedPackage}
+          disabled={!selectedPackage || isProcessing}
         >
           <LinearGradient
             colors={[Colors.primary, Colors.primaryDark]}
@@ -239,9 +260,11 @@ export default function AddCreditsScreen() {
           >
             <CreditCard size={20} color={Colors.textPrimary} />
             <Text style={styles.purchaseButtonText}>
-              {selectedPackage 
-                ? `Purchase ${creditPackages.find(p => p.id === selectedPackage)?.name}`
-                : 'Select a Package'
+              {isProcessing 
+                ? 'Processing...'
+                : selectedPackage 
+                  ? `Purchase ${creditPackages.find(p => p.id === selectedPackage)?.name}`
+                  : 'Select a Package'
               }
             </Text>
           </LinearGradient>

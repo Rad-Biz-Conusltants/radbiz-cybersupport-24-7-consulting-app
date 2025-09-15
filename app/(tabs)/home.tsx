@@ -6,32 +6,50 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
+import { useTickets } from '@/providers/tickets-provider';
 
 function ClientDashboard() {
   const { user } = useAuth();
+  const { ticketStats, accountBalance, tickets, isLoading } = useTickets();
   const insets = useSafeAreaInsets();
   const isBusinessAccount = user?.planType === 'business';
 
-  const ticketStats = {
-    open: 3,
-    closed: 12,
-    pending: 1,
-    total: 16
-  };
-
   const businessStats = {
-    balance: 850,
-    usedTickets: 15,
-    totalTickets: 100,
+    balance: accountBalance.balance,
+    usedTickets: accountBalance.usedTickets,
+    totalTickets: accountBalance.totalTickets,
     authorizedUsers: 8,
     maxUsers: 25
   };
 
-  const recentTickets = [
-    { id: 'T001', title: 'Email server configuration', status: 'open', priority: 'high', created: '2 hours ago', ip: '192.168.1.45' },
-    { id: 'T002', title: 'Firewall rule update', status: 'pending', priority: 'medium', created: '1 day ago', ip: '192.168.1.23' },
-    { id: 'T003', title: 'Software installation', status: 'closed', priority: 'low', created: '3 days ago', ip: '192.168.1.67' }
-  ];
+  // Get recent tickets (last 5)
+  const recentTickets = tickets
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 5)
+    .map(ticket => ({
+      id: ticket.id,
+      title: ticket.title,
+      status: ticket.status,
+      priority: ticket.priority,
+      created: formatTimeAgo(ticket.createdAt),
+      ip: '192.168.1.' + Math.floor(Math.random() * 255) // Mock IP for business accounts
+    }));
+
+  function formatTimeAgo(dateString: string): string {
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffInMs = now.getTime() - date.getTime();
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+    const diffInDays = Math.floor(diffInHours / 24);
+    
+    if (diffInHours < 1) {
+      return 'Just now';
+    } else if (diffInHours < 24) {
+      return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+    } else {
+      return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+    }
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -125,8 +143,8 @@ function ClientDashboard() {
             <View style={[styles.statIcon, { backgroundColor: Colors.accentAlpha }]}>
               <AlertTriangle size={20} color={Colors.accent} />
             </View>
-            <Text style={styles.statValue}>{ticketStats.total}</Text>
-            <Text style={styles.statLabel}>Total Tickets</Text>
+            <Text style={styles.statValue}>{ticketStats.monthlyTotal}</Text>
+            <Text style={styles.statLabel}>Monthly Total</Text>
           </TouchableOpacity>
         </View>
 
@@ -170,7 +188,7 @@ function ClientDashboard() {
                     />
                   </View>
                   <Text style={styles.usageText}>
-                    {businessStats.usedTickets}/{businessStats.totalTickets} tickets used
+                    {businessStats.usedTickets}/{businessStats.totalTickets} tickets used this month
                   </Text>
                 </View>
               </LinearGradient>

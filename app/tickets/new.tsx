@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as DocumentPicker from 'expo-document-picker';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
+import { useTickets } from '@/providers/tickets-provider';
 
 type SupportType = 'it' | 'cybersecurity';
 type Priority = 'low' | 'medium' | 'high';
@@ -29,6 +30,7 @@ interface TicketForm {
 
 export default function NewTicketScreen() {
   const { user } = useAuth();
+  const { createTicket } = useTickets();
   const insets = useSafeAreaInsets();
   const [form, setForm] = useState<TicketForm>({
     supportType: 'it',
@@ -74,26 +76,26 @@ export default function NewTicketScreen() {
       return;
     }
 
+    if (!user?.id) {
+      Alert.alert('Error', 'User not authenticated.');
+      return;
+    }
+
     setIsSubmitting(true);
     
     try {
-      const ticketId = generateTicketId();
-      const assignedTech = assignTechSupport(form.supportType);
-      
-      // Simulate API call with ticket creation
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      console.log('Ticket created:', {
-        id: ticketId,
-        ...form,
-        assignedTo: assignedTech,
-        status: 'open',
-        createdAt: new Date().toISOString(),
-        userId: user?.id
+      // Create ticket using the tickets provider
+      const newTicket = await createTicket({
+        title: form.title,
+        description: form.description,
+        supportType: form.supportType,
+        priority: form.priority,
+        userId: user.id,
+        attachments: form.attachments
       });
       
       setIsSubmitting(false);
-      setCreatedTicket({ id: ticketId, assignedTo: assignedTech });
+      setCreatedTicket({ id: newTicket.id, assignedTo: newTicket.assignedTo || 'Unassigned' });
       setShowSuccess(true);
       
       // Animate success screen
@@ -105,6 +107,7 @@ export default function NewTicketScreen() {
       
     } catch (error) {
       setIsSubmitting(false);
+      console.error('Failed to create ticket:', error);
       Alert.alert('Error', 'Failed to create ticket. Please try again.');
     }
   };
@@ -224,8 +227,8 @@ export default function NewTicketScreen() {
                 <View style={styles.ticketInfoDivider} />
                 <View style={styles.ticketInfoRow}>
                   <Text style={styles.ticketInfoLabel}>Status:</Text>
-                  <View style={styles.statusBadge}>
-                    <Text style={styles.statusText}>Open</Text>
+                  <View style={[styles.statusBadge, { backgroundColor: Colors.warningAlpha }]}>
+                    <Text style={[styles.statusText, { color: Colors.warning }]}>Pending</Text>
                   </View>
                 </View>
               </LinearGradient>

@@ -243,8 +243,8 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   logoContainer: {
-    width: 80,
-    height: 80,
+    width: 140,
+    height: 140,
     borderRadius: 20,
     backgroundColor: Colors.cardBackground,
     alignItems: 'center',
@@ -254,8 +254,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.cardBorder,
   },
   logo: {
-    width: 60,
-    height: 60,
+    width: 120,
+    height: 120,
   },
   title: {
     fontSize: 28,

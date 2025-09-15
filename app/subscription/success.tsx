@@ -440,15 +440,18 @@ const styles = StyleSheet.create({
   detailLabel: {
     fontSize: 14,
     color: Colors.textSecondary,
+    fontWeight: '500',
   },
   detailValue: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
     color: Colors.textPrimary,
   },
   subscriptionId: {
     fontFamily: 'monospace',
     fontSize: 12,
+    color: Colors.textPrimary,
+    fontWeight: '600',
   },
   featuresCard: {
     marginBottom: 20,
@@ -478,8 +481,9 @@ const styles = StyleSheet.create({
   },
   featureText: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: Colors.textPrimary,
     marginLeft: 12,
+    fontWeight: '500',
   },
   actionButtons: {
     paddingHorizontal: 20,
@@ -500,7 +504,7 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.textSecondary,
+    color: Colors.textPrimary,
   },
   primaryButton: {
     borderRadius: 12,

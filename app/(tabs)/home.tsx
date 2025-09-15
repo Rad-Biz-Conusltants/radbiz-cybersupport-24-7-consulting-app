@@ -1,13 +1,275 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Shield, Monitor, ArrowRight, CheckCircle, Clock, Users } from 'lucide-react-native';
+import { Shield, Monitor, ArrowRight, CheckCircle, Clock, Users, Ticket, AlertTriangle, DollarSign, Settings, Plus, Eye, MapPin, Calendar } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
+import { useAuth } from '@/providers/auth-provider';
+
+function ClientDashboard() {
+  const { user } = useAuth();
+  const insets = useSafeAreaInsets();
+  const isBusinessAccount = user?.planType === 'business';
+
+  const ticketStats = {
+    open: 3,
+    closed: 12,
+    pending: 1,
+    total: 16
+  };
+
+  const businessStats = {
+    balance: 850,
+    usedTickets: 15,
+    totalTickets: 100,
+    authorizedUsers: 8,
+    maxUsers: 25
+  };
+
+  const recentTickets = [
+    { id: 'T001', title: 'Email server configuration', status: 'open', priority: 'high', created: '2 hours ago', ip: '192.168.1.45' },
+    { id: 'T002', title: 'Firewall rule update', status: 'pending', priority: 'medium', created: '1 day ago', ip: '192.168.1.23' },
+    { id: 'T003', title: 'Software installation', status: 'closed', priority: 'low', created: '3 days ago', ip: '192.168.1.67' }
+  ];
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'open': return Colors.error;
+      case 'pending': return Colors.warning;
+      case 'closed': return Colors.success;
+      default: return Colors.textMuted;
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high': return Colors.error;
+      case 'medium': return Colors.warning;
+      case 'low': return Colors.success;
+      default: return Colors.textMuted;
+    }
+  };
+
+  return (
+    <LinearGradient
+      colors={[Colors.backgroundStart, Colors.backgroundEnd]}
+      style={styles.container}
+    >
+      <ScrollView 
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.dashboardHeader}>
+          <View style={styles.logoContainer}>
+            <Image 
+              source={require('@/assets/images/adaptive-icon.png')}
+              style={styles.dashboardLogo}
+              resizeMode="contain"
+            />
+          </View>
+          <View style={styles.headerInfo}>
+            <Text style={styles.welcomeText}>Welcome back,</Text>
+            <Text style={styles.userName}>{user?.name}</Text>
+            <View style={styles.accountTypeContainer}>
+              <View style={[styles.accountTypeBadge, { backgroundColor: isBusinessAccount ? Colors.primaryAlpha : Colors.accentAlpha }]}>
+                <Text style={[styles.accountTypeText, { color: isBusinessAccount ? Colors.primary : Colors.accent }]}>
+                  {isBusinessAccount ? 'Business Account' : 'Personal Account'}
+                </Text>
+              </View>
+            </View>
+            {user?.company && (
+              <Text style={styles.companyName}>{user.company}</Text>
+            )}
+          </View>
+          <TouchableOpacity style={styles.settingsButton}>
+            <Settings size={24} color={Colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Quick Stats */}
+        <View style={styles.statsGrid}>
+          <View style={styles.statCard}>
+            <View style={[styles.statIcon, { backgroundColor: Colors.errorAlpha }]}>
+              <Ticket size={20} color={Colors.error} />
+            </View>
+            <Text style={styles.statValue}>{ticketStats.open}</Text>
+            <Text style={styles.statLabel}>Open Tickets</Text>
+          </View>
+          <View style={styles.statCard}>
+            <View style={[styles.statIcon, { backgroundColor: Colors.successAlpha }]}>
+              <CheckCircle size={20} color={Colors.success} />
+            </View>
+            <Text style={styles.statValue}>{ticketStats.closed}</Text>
+            <Text style={styles.statLabel}>Closed Tickets</Text>
+          </View>
+          <View style={styles.statCard}>
+            <View style={[styles.statIcon, { backgroundColor: Colors.warningAlpha }]}>
+              <Clock size={20} color={Colors.warning} />
+            </View>
+            <Text style={styles.statValue}>{ticketStats.pending}</Text>
+            <Text style={styles.statLabel}>Pending</Text>
+          </View>
+          <View style={styles.statCard}>
+            <View style={[styles.statIcon, { backgroundColor: Colors.accentAlpha }]}>
+              <AlertTriangle size={20} color={Colors.accent} />
+            </View>
+            <Text style={styles.statValue}>{ticketStats.total}</Text>
+            <Text style={styles.statLabel}>Total Tickets</Text>
+          </View>
+        </View>
+
+        {/* Business Account Advanced Features */}
+        {isBusinessAccount && (
+          <View style={styles.businessSection}>
+            <Text style={styles.sectionTitle}>Business Dashboard</Text>
+            
+            {/* Balance & Usage */}
+            <View style={styles.businessCard}>
+              <LinearGradient
+                colors={[Colors.cardBackground, '#2A2A2A']}
+                style={styles.cardGradient}
+              >
+                <View style={styles.businessHeader}>
+                  <View style={[styles.businessIcon, { backgroundColor: Colors.primaryAlpha }]}>
+                    <DollarSign size={24} color={Colors.primary} />
+                  </View>
+                  <View style={styles.businessInfo}>
+                    <Text style={styles.businessTitle}>Account Balance</Text>
+                    <Text style={styles.businessValue}>${businessStats.balance}</Text>
+                  </View>
+                </View>
+                <View style={styles.usageBar}>
+                  <View style={styles.usageBarBackground}>
+                    <View 
+                      style={[
+                        styles.usageBarFill, 
+                        { 
+                          width: `${(businessStats.usedTickets / businessStats.totalTickets) * 100}%`,
+                          backgroundColor: Colors.primary
+                        }
+                      ]} 
+                    />
+                  </View>
+                  <Text style={styles.usageText}>
+                    {businessStats.usedTickets}/{businessStats.totalTickets} tickets used
+                  </Text>
+                </View>
+              </LinearGradient>
+            </View>
+
+            {/* Authorized Users */}
+            <View style={styles.businessCard}>
+              <LinearGradient
+                colors={[Colors.cardBackground, '#2A2A2A']}
+                style={styles.cardGradient}
+              >
+                <View style={styles.businessHeader}>
+                  <View style={[styles.businessIcon, { backgroundColor: Colors.accentAlpha }]}>
+                    <Users size={24} color={Colors.accent} />
+                  </View>
+                  <View style={styles.businessInfo}>
+                    <Text style={styles.businessTitle}>Authorized Users</Text>
+                    <Text style={styles.businessValue}>{businessStats.authorizedUsers}/{businessStats.maxUsers}</Text>
+                  </View>
+                  <TouchableOpacity style={styles.manageButton}>
+                    <Text style={styles.manageButtonText}>Manage</Text>
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
+            </View>
+          </View>
+        )}
+
+        {/* Recent Tickets */}
+        <View style={styles.ticketsSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Tickets</Text>
+            <TouchableOpacity style={styles.viewAllButton}>
+              <Text style={styles.viewAllText}>View All</Text>
+              <ArrowRight size={16} color={Colors.accent} />
+            </TouchableOpacity>
+          </View>
+          
+          {recentTickets.map((ticket) => (
+            <TouchableOpacity key={ticket.id} style={styles.ticketCard}>
+              <LinearGradient
+                colors={[Colors.cardBackground, '#2A2A2A']}
+                style={styles.cardGradient}
+              >
+                <View style={styles.ticketHeader}>
+                  <View style={styles.ticketInfo}>
+                    <Text style={styles.ticketId}>#{ticket.id}</Text>
+                    <Text style={styles.ticketTitle}>{ticket.title}</Text>
+                  </View>
+                  <View style={styles.ticketMeta}>
+                    <View style={[styles.statusBadge, { backgroundColor: getStatusColor(ticket.status) + '20' }]}>
+                      <Text style={[styles.statusText, { color: getStatusColor(ticket.status) }]}>
+                        {ticket.status.toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+                <View style={styles.ticketDetails}>
+                  <View style={styles.ticketDetailItem}>
+                    <Calendar size={14} color={Colors.textMuted} />
+                    <Text style={styles.ticketDetailText}>{ticket.created}</Text>
+                  </View>
+                  <View style={styles.ticketDetailItem}>
+                    <AlertTriangle size={14} color={getPriorityColor(ticket.priority)} />
+                    <Text style={[styles.ticketDetailText, { color: getPriorityColor(ticket.priority) }]}>
+                      {ticket.priority.toUpperCase()}
+                    </Text>
+                  </View>
+                  {isBusinessAccount && (
+                    <View style={styles.ticketDetailItem}>
+                      <MapPin size={14} color={Colors.textMuted} />
+                      <Text style={styles.ticketDetailText}>{ticket.ip}</Text>
+                    </View>
+                  )}
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Quick Actions */}
+        <View style={styles.actionsSection}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <View style={styles.actionsGrid}>
+            <TouchableOpacity style={styles.actionCard}>
+              <LinearGradient
+                colors={[Colors.primary, Colors.primaryDark]}
+                style={styles.actionGradient}
+              >
+                <Plus size={24} color={Colors.textPrimary} />
+                <Text style={styles.actionText}>New Ticket</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionCard}>
+              <LinearGradient
+                colors={[Colors.accent, Colors.accentDark]}
+                style={styles.actionGradient}
+              >
+                <Eye size={24} color={Colors.textPrimary} />
+                <Text style={styles.actionText}>View Support</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+    </LinearGradient>
+  );
+}
 
 export default function SupportSelectionScreen() {
+  const { user } = useAuth();
   const insets = useSafeAreaInsets();
+  
+  if (user) {
+    return <ClientDashboard />;
+  }
 
   const handleITSupport = () => {
     router.push('/(auth)/signup?supportType=it');
@@ -52,14 +314,14 @@ export default function SupportSelectionScreen() {
           {stats.map((stat) => (
             <View key={stat.id} style={styles.statItem}>
               <stat.icon size={20} color={Colors.primary} />
-              <Text style={styles.statValue}>{stat.value}</Text>
-              <Text style={styles.statLabel}>{stat.label}</Text>
+              <Text style={styles.landingStatValue}>{stat.value}</Text>
+              <Text style={styles.landingStatLabel}>{stat.label}</Text>
             </View>
           ))}
         </View>
 
         <View style={styles.supportOptions}>
-          <Text style={styles.sectionTitle}>Which support do you need?</Text>
+          <Text style={styles.landingSectionTitle}>Which support do you need?</Text>
           
           <TouchableOpacity 
             style={styles.supportCard}
@@ -236,14 +498,14 @@ const styles = StyleSheet.create({
   statItem: {
     alignItems: 'center',
   },
-  statValue: {
+  landingStatValue: {
     fontSize: 24,
     fontWeight: '700',
     color: Colors.primary,
     marginTop: 8,
     marginBottom: 4,
   },
-  statLabel: {
+  landingStatLabel: {
     fontSize: 12,
     color: Colors.textSecondary,
     textAlign: 'center',
@@ -251,7 +513,7 @@ const styles = StyleSheet.create({
   supportOptions: {
     marginBottom: 40,
   },
-  sectionTitle: {
+  landingSectionTitle: {
     fontSize: 24,
     fontWeight: '700',
     color: Colors.textPrimary,
@@ -354,5 +616,248 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.textPrimary,
     textAlign: 'center',
+  },
+  // Dashboard Styles
+  dashboardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+    paddingHorizontal: 4,
+  },
+  dashboardLogo: {
+    width: 50,
+    height: 50,
+  },
+  headerInfo: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  welcomeText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 2,
+  },
+  userName: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  accountTypeContainer: {
+    marginBottom: 4,
+  },
+  accountTypeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  accountTypeText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  companyName: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+  settingsButton: {
+    padding: 8,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 32,
+  },
+  statCard: {
+    width: '48%',
+    backgroundColor: Colors.cardBackground,
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  statIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  businessSection: {
+    marginBottom: 32,
+  },
+  businessCard: {
+    marginBottom: 16,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  businessHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  businessIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  businessInfo: {
+    flex: 1,
+  },
+  businessTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  businessValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  manageButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: Colors.accentAlpha,
+    borderRadius: 8,
+  },
+  manageButtonText: {
+    color: Colors.accent,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  usageBar: {
+    marginTop: 8,
+  },
+  usageBarBackground: {
+    height: 8,
+    backgroundColor: Colors.cardBorder,
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  usageBarFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  usageText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  ticketsSection: {
+    marginBottom: 32,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  viewAllText: {
+    fontSize: 14,
+    color: Colors.accent,
+    marginRight: 4,
+    fontWeight: '600',
+  },
+  ticketCard: {
+    marginBottom: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  ticketHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  ticketInfo: {
+    flex: 1,
+  },
+  ticketId: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    marginBottom: 4,
+  },
+  ticketTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
+  ticketMeta: {
+    alignItems: 'flex-end',
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  ticketDetails: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  ticketDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ticketDetailText: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    marginLeft: 4,
+  },
+  actionsSection: {
+    marginBottom: 32,
+  },
+  actionsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  actionCard: {
+    width: '48%',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  actionGradient: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 80,
+  },
+  actionText: {
+    color: Colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 8,
   },
 });

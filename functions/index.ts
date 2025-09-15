@@ -1,87 +1,146 @@
-// Mock Backend Functions for Stripe Integration
-// These are frontend mock implementations for development
+// Firebase Best Practices for RadBiz Support App
+// This file documents the recommended Firebase/Firestore structure and provides mock functions
 
-type Request = {
-  method: string;
-  body: any;
-};
+/**
+ * FIREBASE BEST PRACTICES FOR RADBIZ SUPPORT APP
+ * 
+ * 1. COLLECTION STRUCTURE:
+ * 
+ * Primary Collections:
+ * - users/{userId} - Main user document (for easy access across user types)
+ * - individual_users/{userId} - Individual plan users
+ * - business_users/{userId} - Business plan users
+ * - subscriptions/{userId} - User subscription data
+ * - tickets/{ticketId} - Support tickets
+ * - user_activities/{activityId} - User activity logs
+ * - purchases/{purchaseId} - Purchase records
+ * - checkout_sessions/{sessionId} - Stripe checkout sessions
+ * 
+ * 2. USER DOCUMENT STRUCTURE:
+ * 
+ * users/{userId}:
+ * {
+ *   id: string,
+ *   email: string,
+ *   name: string,
+ *   planType: 'individual' | 'business',
+ *   company?: string,
+ *   userType: 'client' | 'tech',
+ *   createdAt: string,
+ *   updatedAt: string,
+ *   accountBalance: {
+ *     ticketBalance: number,
+ *     totalTickets: number
+ *   },
+ *   subscription?: {
+ *     plan: 'individual' | 'business',
+ *     billingCycle: 'monthly' | 'yearly',
+ *     status: 'active' | 'trial' | 'expired',
+ *     trialEndDate?: string,
+ *     nextBillingDate: string
+ *   }
+ * }
+ * 
+ * 3. COLLECTION STRATEGY:
+ * 
+ * Individual Users: Store in both 'users' and 'individual_users' collections
+ * Business Users: Store in both 'users' and 'business_users' collections
+ * 
+ * This dual storage approach allows for:
+ * - Easy querying across all users via 'users' collection
+ * - Plan-specific queries via type-specific collections
+ * - Better security rules and access control
+ * 
+ * 4. SECURITY RULES:
+ * 
+ * rules_version = '2';
+ * service cloud.firestore {
+ *   match /databases/{database}/documents {
+ *     // Users can read/write their own data
+ *     match /users/{userId} {
+ *       allow read, write: if request.auth != null && request.auth.uid == userId;
+ *     }
+ *     
+ *     // Business users can read their team members
+ *     match /business_users/{userId} {
+ *       allow read: if request.auth != null && 
+ *         (request.auth.uid == userId || 
+ *          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.company == 
+ *          get(/databases/$(database)/documents/users/$(userId)).data.company);
+ *       allow write: if request.auth != null && request.auth.uid == userId;
+ *     }
+ *     
+ *     // Tickets can be read by owner or business team members
+ *     match /tickets/{ticketId} {
+ *       allow read, write: if request.auth != null && 
+ *         (resource.data.userId == request.auth.uid ||
+ *          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.company == 
+ *          get(/databases/$(database)/documents/users/$(resource.data.userId)).data.company);
+ *     }
+ *   }
+ * }
+ * 
+ * 5. INDEXING STRATEGY:
+ * 
+ * Create composite indexes for:
+ * - tickets: (userId, status, createdAt)
+ * - tickets: (company, status, createdAt) 
+ * - user_activities: (userId, timestamp)
+ * - purchases: (userId, createdAt)
+ * 
+ * 6. DATA CONSISTENCY:
+ * 
+ * Use Firestore transactions for operations that affect multiple documents:
+ * - Creating tickets (update user balance + create ticket)
+ * - Processing purchases (update balance + create purchase record)
+ * - User creation by admin (create user + log activity)
+ */
 
-type Response = {
-  status: (code: number) => Response;
-  json: (data: any) => void;
-};
+// Mock implementations for development
+// In production, these would be Firebase Cloud Functions
 
-// Mock database operations
-const mockDb = {
-  collection: (name: string) => ({
-    doc: (id: string) => ({
-      set: async (data: any) => Promise.resolve(),
-      update: async (data: any) => Promise.resolve(),
-      get: async () => ({
-        exists: true,
-        data: () => ({
-          userId: 'mock-user',
-          status: 'pending',
-          type: 'credit_purchase',
-          packageId: 'starter',
-          plan: 'individual',
-          billingCycle: 'monthly',
-          packageData: { credits: 10, bonus: 0, price: 10000, name: 'Starter Pack' },
-          planData: { name: 'Individual Monthly', price: 2999, interval: 'month' }
-        }),
-        ref: {
-          update: async (data: any) => Promise.resolve()
-        }
-      })
-    }),
-    add: async (data: any) => Promise.resolve({ id: 'mock-doc-id' })
-  }),
-  FieldValue: {
-    increment: (value: number) => ({ _increment: value })
-  }
-};
-
-// Mock logger
-const logger = {
-  info: (...args: any[]) => console.log('[INFO]', ...args),
-  error: (...args: any[]) => console.error('[ERROR]', ...args)
-};
-
-// Mock onRequest function
-function onRequest(options: any, handler: (req: Request, res: Response) => Promise<void>) {
-  return handler;
+export interface CreditPackage {
+  name: string;
+  credits: number;
+  price: number; // in cents
+  bonus: number;
 }
 
-// Credit Package Definitions
-const CREDIT_PACKAGES = {
+export interface SubscriptionPlan {
+  name: string;
+  price: number; // in cents
+  interval: 'month' | 'year';
+  features: string[];
+}
+
+export const CREDIT_PACKAGES: Record<string, CreditPackage> = {
   starter: {
     name: 'Starter Pack',
     credits: 10,
-    price: 10000, // $100.00 in cents
+    price: 10000, // $100.00
     bonus: 0,
   },
   professional: {
     name: 'Professional Pack', 
     credits: 30,
-    price: 25000, // $250.00 in cents
+    price: 25000, // $250.00
     bonus: 5,
   },
   enterprise: {
     name: 'Enterprise Pack',
     credits: 65,
-    price: 50000, // $500.00 in cents
+    price: 50000, // $500.00
     bonus: 15,
   },
   unlimited: {
     name: 'Premium Monthly',
     credits: 150,
-    price: 100000, // $1000.00 in cents
+    price: 100000, // $1000.00
     bonus: 0,
   },
 };
 
-// Subscription Plans
-const SUBSCRIPTION_PLANS = {
+export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
   individual_monthly: {
     name: 'Individual Monthly',
     price: 2999, // $29.99
@@ -90,7 +149,7 @@ const SUBSCRIPTION_PLANS = {
   },
   individual_yearly: {
     name: 'Individual Yearly',
-    price: 29999, // $299.99 (save $60)
+    price: 29999, // $299.99
     interval: 'year',
     features: ['50 tickets/month', 'Email support', 'Basic security tools', '2 months free'],
   },
@@ -102,345 +161,74 @@ const SUBSCRIPTION_PLANS = {
   },
   business_yearly: {
     name: 'Business Yearly',
-    price: 99999, // $999.99 (save $200)
+    price: 99999, // $999.99
     interval: 'year',
     features: ['Unlimited tickets', 'Priority support', 'Advanced security tools', 'Team management', '2 months free'],
   },
 };
 
-/**
- * Create Stripe Checkout Session for Credit Purchases
- */
-export const createCreditCheckout = onRequest(
-  { cors: true },
-  async (request: Request, response: Response) => {
-    try {
-      if (request.method !== 'POST') {
-        response.status(405).json({ error: 'Method not allowed' });
-        return;
-      }
+// Mock function signatures for Firebase Cloud Functions
+// These would be implemented as actual Cloud Functions in production
 
-      const { packageId, userId, userEmail, returnUrl, cancelUrl } = request.body;
-      
-      // Validate required fields
-      if (!packageId || !userId || !userEmail || !returnUrl || !cancelUrl) {
-        response.status(400).json({ error: 'Missing required fields' });
-        return;
-      }
-      
-      // Validate package
-      const packageData = CREDIT_PACKAGES[packageId as keyof typeof CREDIT_PACKAGES];
-      if (!packageData) {
-        response.status(400).json({ error: 'Invalid package ID' });
-        return;
-      }
+export interface CreateCreditCheckoutRequest {
+  packageId: string;
+  userId: string;
+  userEmail: string;
+  returnUrl: string;
+  cancelUrl: string;
+}
 
-      // For demo purposes, return a mock checkout URL
-      // In production, you would integrate with actual Stripe API
-      const mockSessionId = `cs_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const checkoutUrl = `https://checkout.stripe.com/pay/${mockSessionId}`;
+export interface CreateSubscriptionCheckoutRequest {
+  plan: 'individual' | 'business';
+  billingCycle: 'monthly' | 'yearly';
+  userId: string;
+  userEmail: string;
+  returnUrl: string;
+  cancelUrl: string;
+}
 
-      // Store session data in mock database for later verification
-      await mockDb.collection('checkout_sessions').doc(mockSessionId).set({
-        type: 'credit_purchase',
-        userId,
-        packageId,
-        packageData,
-        userEmail,
-        returnUrl,
-        cancelUrl,
-        status: 'pending',
-        createdAt: new Date(),
-      });
+export interface CreateUserRequest {
+  adminUserId: string;
+  fullName: string;
+  phone: string;
+  email: string;
+  password: string;
+  lastFourSSN: string;
+  role: string;
+}
 
-      logger.info('Credit checkout session created', { sessionId: mockSessionId, userId, packageId });
+// Mock implementations for development
+export const createCreditCheckout = async (request: CreateCreditCheckoutRequest) => {
+  // In production, this would create a Stripe checkout session
+  const mockSessionId = `cs_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return {
+    success: true,
+    checkoutUrl: `https://checkout.stripe.com/pay/${mockSessionId}`,
+    sessionId: mockSessionId,
+  };
+};
 
-      response.json({
-        success: true,
-        checkoutUrl,
-        sessionId: mockSessionId,
-      });
-    } catch (error) {
-      logger.error('Create credit checkout error:', error);
-      response.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-    }
-  }
-);
+export const createSubscriptionCheckout = async (request: CreateSubscriptionCheckoutRequest) => {
+  // In production, this would create a Stripe subscription checkout
+  const mockSessionId = `cs_sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return {
+    success: true,
+    checkoutUrl: `https://checkout.stripe.com/pay/${mockSessionId}`,
+    sessionId: mockSessionId,
+  };
+};
 
-/**
- * Create Stripe Checkout Session for Subscription Purchases
- */
-export const createSubscriptionCheckout = onRequest(
-  { cors: true },
-  async (request: Request, response: Response) => {
-    try {
-      if (request.method !== 'POST') {
-        response.status(405).json({ error: 'Method not allowed' });
-        return;
-      }
-
-      const { plan, billingCycle, userId, userEmail, returnUrl, cancelUrl } = request.body;
-      
-      // Validate required fields
-      if (!plan || !billingCycle || !userId || !userEmail || !returnUrl || !cancelUrl) {
-        response.status(400).json({ error: 'Missing required fields' });
-        return;
-      }
-      
-      // Get plan key
-      const planKey = `${plan}_${billingCycle}` as keyof typeof SUBSCRIPTION_PLANS;
-      const planData = SUBSCRIPTION_PLANS[planKey];
-      
-      if (!planData) {
-        response.status(400).json({ error: 'Invalid subscription plan' });
-        return;
-      }
-
-      // For demo purposes, return a mock checkout URL
-      const mockSessionId = `cs_sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const checkoutUrl = `https://checkout.stripe.com/pay/${mockSessionId}`;
-
-      // Store session data in mock database
-      await mockDb.collection('checkout_sessions').doc(mockSessionId).set({
-        type: 'subscription',
-        userId,
-        plan,
-        billingCycle,
-        planData,
-        userEmail,
-        returnUrl,
-        cancelUrl,
-        status: 'pending',
-        createdAt: new Date(),
-      });
-
-      logger.info('Subscription checkout session created', { sessionId: mockSessionId, userId, plan, billingCycle });
-
-      response.json({
-        success: true,
-        checkoutUrl,
-        sessionId: mockSessionId,
-      });
-    } catch (error) {
-      logger.error('Create subscription checkout error:', error);
-      response.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-    }
-  }
-);
-
-/**
- * Verify Purchase and Return Details
- */
-export const verifyPurchase = onRequest(
-  { cors: true },
-  async (request: Request, response: Response) => {
-    try {
-      if (request.method !== 'POST') {
-        response.status(405).json({ error: 'Method not allowed' });
-        return;
-      }
-
-      const { sessionId, userId } = request.body;
-      
-      if (!sessionId || !userId) {
-        response.status(400).json({ error: 'Missing required fields' });
-        return;
-      }
-      
-      // Retrieve the checkout session from mock database
-      const sessionDoc = await mockDb.collection('checkout_sessions').doc(sessionId).get();
-      
-      if (!sessionDoc.exists) {
-        response.status(404).json({ error: 'Session not found' });
-        return;
-      }
-      
-      const sessionData = sessionDoc.data()!;
-      
-      // Verify the session belongs to the user
-      if (sessionData.userId !== userId) {
-        response.status(403).json({ error: 'Session does not belong to user' });
-        return;
-      }
-      
-      // For demo purposes, simulate successful payment
-      // In production, you would verify with Stripe API
-      
-      if (sessionData.type === 'credit_purchase') {
-        // Handle credit purchase
-        const { packageData } = sessionData;
-        const credits = packageData.credits;
-        const bonus = packageData.bonus || 0;
-        const totalCredits = credits + bonus;
-        
-        // Update user's credit balance in mock database
-        const userDoc = mockDb.collection('users').doc(userId);
-        await userDoc.update({
-          'accountBalance.ticketBalance': mockDb.FieldValue.increment(totalCredits),
-          'accountBalance.totalTickets': mockDb.FieldValue.increment(totalCredits),
-          updatedAt: new Date(),
-        });
-        
-        // Mark session as completed
-        await sessionDoc.ref.update({
-          status: 'completed',
-          completedAt: new Date(),
-        });
-        
-        // Create purchase record
-        await mockDb.collection('purchases').add({
-          userId,
-          sessionId,
-          type: 'credit_purchase',
-          packageId: sessionData.packageId,
-          credits,
-          bonus,
-          totalCredits,
-          amount: packageData.price / 100,
-          createdAt: new Date(),
-        });
-        
-        logger.info('Credit purchase verified and processed', { sessionId, userId, totalCredits });
-        
-        response.json({
-          success: true,
-          purchaseDetails: {
-            sessionId,
-            packageName: packageData.name,
-            credits,
-            bonus,
-            totalCredits,
-            amount: packageData.price / 100,
-            purchaseDate: new Date().toLocaleDateString(),
-          },
-        });
-      } else if (sessionData.type === 'subscription') {
-        // Handle subscription purchase
-        const { plan, billingCycle, planData } = sessionData;
-        
-        // Create subscription record
-        const subscriptionId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const customerId = `cus_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        
-        const trialEndDate = new Date();
-        trialEndDate.setDate(trialEndDate.getDate() + 14); // 14-day trial
-        
-        const nextBillingDate = new Date(trialEndDate);
-        if (billingCycle === 'yearly') {
-          nextBillingDate.setFullYear(nextBillingDate.getFullYear() + 1);
-        } else {
-          nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
-        }
-        
-        const subscriptionData = {
-          subscriptionId,
-          customerId,
-          plan,
-          billingCycle,
-          status: 'trial',
-          trialEndDate: trialEndDate.toISOString(),
-          nextBillingDate: nextBillingDate.toISOString(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        
-        // Update user's subscription in mock database
-        const userDoc = mockDb.collection('users').doc(userId);
-        await userDoc.update({
-          subscription: subscriptionData,
-          updatedAt: new Date(),
-        });
-        
-        // Mark session as completed
-        await sessionDoc.ref.update({
-          status: 'completed',
-          completedAt: new Date(),
-        });
-        
-        logger.info('Subscription verified and processed', { sessionId, userId, subscriptionId });
-        
-        response.json({
-          success: true,
-          subscriptionDetails: {
-            sessionId,
-            subscriptionId,
-            customerId,
-            plan,
-            billingCycle,
-            status: 'trial',
-            trialEndDate: trialEndDate.toISOString(),
-            nextBillingDate: nextBillingDate.toISOString(),
-            amount: planData.price / 100,
-            createdAt: new Date().toISOString(),
-          },
-        });
-      } else {
-        response.status(400).json({ error: 'Unknown purchase type' });
-      }
-    } catch (error) {
-      logger.error('Verify purchase error:', error);
-      response.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-    }
-  }
-);
-
-/**
- * Handle Stripe Webhooks (for production use)
- */
-export const stripeWebhook = onRequest(
-  { cors: false },
-  async (request: Request, response: Response) => {
-    try {
-      if (request.method !== 'POST') {
-        response.status(405).json({ error: 'Method not allowed' });
-        return;
-      }
-
-      // In production, verify webhook signature here
-      const event = request.body;
-      
-      logger.info('Webhook received:', event.type);
-      
-      switch (event.type) {
-        case 'checkout.session.completed':
-          // Handle successful payment
-          logger.info('Checkout session completed:', event.data.object.id);
-          break;
-          
-        case 'customer.subscription.updated':
-          // Handle subscription updates
-          logger.info('Subscription updated:', event.data.object.id);
-          break;
-          
-        case 'customer.subscription.deleted':
-          // Handle subscription cancellation
-          logger.info('Subscription cancelled:', event.data.object.id);
-          break;
-          
-        case 'invoice.payment_failed':
-          // Handle failed payments
-          logger.info('Payment failed:', event.data.object.subscription);
-          break;
-          
-        default:
-          logger.info(`Unhandled event type: ${event.type}`);
-      }
-      
-      response.json({ received: true });
-    } catch (error) {
-      logger.error('Webhook error:', error);
-      response.status(400).json({
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-    }
-  }
-);
+export const createUser = async (request: CreateUserRequest) => {
+  // In production, this would create a Firebase Auth user and Firestore document
+  const newUserId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return {
+    success: true,
+    user: {
+      id: newUserId,
+      email: request.email,
+      name: request.fullName,
+      role: request.role,
+      createdAt: new Date().toISOString(),
+    },
+  };
+};

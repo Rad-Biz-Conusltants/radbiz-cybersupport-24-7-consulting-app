@@ -7,6 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/providers/auth-provider';
 import { useSubscription } from '@/providers/subscription-provider';
 import { createSubscriptionCheckout } from '@/functions/stripe-functions';
+import { doc, setDoc } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
 import Colors from '@/constants/colors';
 
 export default function CheckoutScreen() {
@@ -96,44 +98,48 @@ export default function CheckoutScreen() {
           { text: 'Start Getting Support', onPress: () => router.replace('/(tabs)/support') }
         ]);
       } else {
-        // Create Stripe checkout session for subscription
-        const result = await createSubscriptionCheckout({
+        // For subscription plans, start the trial immediately
+        console.log('Starting trial for user:', user.id);
+        
+        const trialEndDate = new Date();
+        trialEndDate.setDate(trialEndDate.getDate() + 14); // 14-day trial
+        
+        const nextBillingDate = new Date(trialEndDate);
+        if (billingCycle === 'yearly') {
+          nextBillingDate.setFullYear(nextBillingDate.getFullYear() + 1);
+        } else {
+          nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
+        }
+        
+        const subscriptionData = {
           plan: selectedPlan as 'individual' | 'business',
           billingCycle,
+          status: 'trial' as const,
+          trialEndDate: trialEndDate.toISOString(),
+          nextBillingDate: nextBillingDate.toISOString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        
+        // Update subscription in context
+        setSubscription(subscriptionData);
+        
+        // Store subscription in Firestore
+        const db = getFirestore();
+        await setDoc(doc(db, 'subscriptions', user.id), {
+          ...subscriptionData,
           userId: user.id,
           userEmail: user.email,
-          returnUrl: `${Platform.OS === 'web' ? window.location.origin : 'exp://'}/(tabs)/home?checkout=success`,
-          cancelUrl: `${Platform.OS === 'web' ? window.location.origin : 'exp://'}/(tabs)/home?checkout=cancelled`,
         });
-
-        if (result.success && result.checkoutUrl) {
-          // Open Stripe checkout in browser
-          const supported = await Linking.canOpenURL(result.checkoutUrl);
-          if (supported) {
-            await Linking.openURL(result.checkoutUrl);
-            
-            // Set subscription as trial while waiting for webhook confirmation
-            setSubscription({
-              plan: selectedPlan as 'individual' | 'business',
-              billingCycle,
-              status: 'trial',
-              nextBillingDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(), // 14 days trial
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            });
-            
-            // Navigate to success page
-            router.replace('/subscription/success');
-          } else {
-            Alert.alert('Error', 'Cannot open checkout URL');
-          }
-        } else {
-          Alert.alert('Error', result.error || 'Failed to create checkout session');
-        }
+        
+        console.log('Trial started successfully');
+        
+        // Navigate to success page
+        router.replace('/subscription/success');
       }
     } catch (error) {
       console.error('Checkout error:', error);
-      Alert.alert('Error', 'Failed to process payment. Please try again.');
+      Alert.alert('Error', 'Failed to start trial. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -331,7 +337,7 @@ export default function CheckoutScreen() {
             >
               <CreditCard size={20} color="#FFFFFF" />
               <Text style={styles.checkoutText}>
-                {loading ? 'Processing...' : (isGuestPlan ? 'Pay Deposit & Start' : 'Start Trial')}
+                {loading ? 'Processing...' : (isGuestPlan ? 'Pay Deposit & Start' : 'Start Free Trial')}
               </Text>
             </LinearGradient>
           </TouchableOpacity>

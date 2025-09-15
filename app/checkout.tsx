@@ -81,6 +81,15 @@ export default function CheckoutScreen() {
   
   const supportInfo = getSupportTypeInfo();
 
+  const getTotalText = () => {
+    if (isGuestPlan) {
+      const guestPlan = currentPlan as typeof plans.guest;
+      return `${guestPlan.deposit} + ${guestPlan.hourly}/hr`;
+    } else {
+      return `${price}/${billingCycle === 'monthly' ? 'mo' : 'yr'}`;
+    }
+  };
+
   const handleCheckout = async () => {
     if (!user?.email) {
       Alert.alert('Error', 'User email is required for checkout');
@@ -100,7 +109,8 @@ export default function CheckoutScreen() {
         console.log('Opening Stripe checkout for user:', user.id);
         
         // Create checkout URL with parameters
-        const checkoutUrl = `https://your-domain.com/checkout.html?plan=${selectedPlan}&billing=${billingCycle}&userId=${user.id}&userEmail=${encodeURIComponent(user.email)}`;
+        const baseUrl = Platform.OS === 'web' ? window.location.origin : 'https://your-app-domain.com';
+        const checkoutUrl = `${baseUrl}/checkout.html?plan=${selectedPlan}&billing=${billingCycle}&userId=${user.id}&userEmail=${encodeURIComponent(user.email)}`;
         
         // Open in device browser to avoid Apple in-app purchase fees
         const supported = await Linking.canOpenURL(checkoutUrl);
@@ -290,10 +300,7 @@ export default function CheckoutScreen() {
             <View style={styles.summaryRow}>
               <Text style={styles.totalLabel}>Total</Text>
               <Text style={styles.totalValue}>
-                {isGuestPlan 
-                  ? `${(currentPlan as typeof plans.guest).deposit} + ${(currentPlan as typeof plans.guest).hourly}/hr`
-                  : `${price}/${billingCycle === 'monthly' ? 'mo' : 'yr'}`
-                }
+                {getTotalText()}
               </Text>
             </View>
           </View>

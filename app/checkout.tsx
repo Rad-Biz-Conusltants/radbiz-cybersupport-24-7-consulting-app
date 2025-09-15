@@ -6,6 +6,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/providers/auth-provider';
 import { useSubscription } from '@/providers/subscription-provider';
+import * as WebBrowser from 'expo-web-browser';
+import { Asset } from 'expo-asset';
 
 import Colors from '@/constants/colors';
 
@@ -100,25 +102,30 @@ export default function CheckoutScreen() {
     
     try {
       if (isGuestPlan) {
-        // For guest plan, simulate payment for now
         Alert.alert('Payment Successful!', 'Your guest support session is ready. You can now get immediate help.', [
           { text: 'Start Getting Support', onPress: () => router.replace('/(tabs)/support') }
         ]);
       } else {
-        // For subscription plans, open Stripe checkout in browser
-        console.log('Opening Stripe checkout for user:', user.id);
-        
-        // Create checkout URL with parameters
-        const baseUrl = Platform.OS === 'web' ? window.location.origin : 'https://your-app-domain.com';
-        const checkoutUrl = `${baseUrl}/checkout.html?plan=${selectedPlan}&billing=${billingCycle}&userId=${user.id}&userEmail=${encodeURIComponent(user.email)}`;
-        
-        // Open in device browser to avoid Apple in-app purchase fees
-        const supported = await Linking.canOpenURL(checkoutUrl);
-        if (supported) {
-          await Linking.openURL(checkoutUrl);
-          console.log('Opened checkout in browser');
+        console.log('Preparing checkout asset for user:', user.id);
+        const asset = Asset.fromModule(require('@/assets/checkout.html'));
+        if (!asset.downloaded) {
+          await asset.downloadAsync();
+        }
+        const assetUri = asset.localUri ?? asset.uri;
+        const params = new URLSearchParams({
+          plan: selectedPlan,
+          billing: billingCycle,
+          userId: user.id,
+          userEmail: user.email,
+        }).toString();
+        const checkoutUrl = `${assetUri}?${params}`;
+        console.log('Checkout URL resolved:', checkoutUrl);
+
+        if (Platform.OS === 'web') {
+          window.location.assign(checkoutUrl);
         } else {
-          throw new Error('Cannot open checkout URL');
+          const result = await WebBrowser.openBrowserAsync(checkoutUrl);
+          console.log('WebBrowser result', result.type);
         }
       }
     } catch (error) {

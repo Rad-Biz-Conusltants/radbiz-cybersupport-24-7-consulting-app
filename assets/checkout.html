@@ -251,8 +251,8 @@
             document.getElementById('trial-notice').style.display = 'block';
         }
         
-        // Initialize Stripe
-        const stripe = Stripe('pk_test_51234567890abcdef'); // Replace with your publishable key
+        // Initialize Stripe (placeholder key for mock demo)
+        const stripe = Stripe('pk_test_51_placeholderxxxxxxxxxxxxxxxxxxxxxxxx');
         const elements = stripe.elements({
             appearance: {
                 theme: 'night',
@@ -281,6 +281,21 @@
         
         // Handle form submission
         const form = document.getElementById('payment-form');
+        const showReturnHint = (url) => {
+            const container = document.getElementById('loading');
+            if (container) {
+                const hint = document.createElement('p');
+                hint.style.color = '#808080';
+                hint.style.fontSize = '12px';
+                hint.style.marginTop = '8px';
+                const link = document.createElement('a');
+                link.href = url;
+                link.textContent = 'Tap here if you are not redirected';
+                link.style.color = '#00FF88';
+                hint.appendChild(link);
+                container.appendChild(hint);
+            }
+        };
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
             
@@ -319,16 +334,15 @@
                 // Simulate successful subscription creation
                 setTimeout(() => {
                     const sessionId = 'cs_mock_' + Date.now();
-                    // Try different return URL formats for better compatibility
-                    const returnUrls = [
-                        `exp://192.168.1.100:8081/--/subscription/success?session_id=${sessionId}`,
-                        `exp://localhost:8081/--/subscription/success?session_id=${sessionId}`,
-                        `radbiz://subscription/success?session_id=${sessionId}`
-                    ];
-                    
-                    // Try the first URL, fallback to others if needed
-                    window.location.href = returnUrls[0];
-                }, 2000);
+                    const origin = window.location.origin || '';
+                    let returnUrl = '';
+                    if (origin.includes('exp.direct') || origin.includes('localhost') || origin.startsWith('http')) {
+                        returnUrl = `${origin}/--/subscription/success?session_id=${sessionId}`;
+                    } else {
+                        returnUrl = `radbiz://subscription/success?session_id=${sessionId}`;
+                    }
+                    window.location.href = returnUrl;
+                }, 1200);
                 
             } catch (err) {
                 console.error('Payment error:', err);

@@ -1,14 +1,22 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, Monitor, Shield, AlertTriangle, ChevronDown, Paperclip, Send } from 'lucide-react-native';
+import { ArrowLeft, Monitor, Shield, AlertTriangle, ChevronDown, Paperclip, Send, X, FileText, Image as ImageIcon } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as DocumentPicker from 'expo-document-picker';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
 
 type SupportType = 'it' | 'cybersecurity';
 type Priority = 'low' | 'medium' | 'high';
+
+interface AttachmentFile {
+  uri: string;
+  name: string;
+  size: number;
+  mimeType: string;
+}
 
 interface TicketForm {
   supportType: SupportType;
@@ -16,6 +24,7 @@ interface TicketForm {
   description: string;
   priority: Priority;
   urgency: string;
+  attachments: AttachmentFile[];
 }
 
 export default function NewTicketScreen() {
@@ -26,7 +35,8 @@ export default function NewTicketScreen() {
     title: '',
     description: '',
     priority: 'medium',
-    urgency: 'normal'
+    urgency: 'normal',
+    attachments: []
   });
   const [showSupportTypeDropdown, setShowSupportTypeDropdown] = useState(false);
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
@@ -43,6 +53,18 @@ export default function NewTicketScreen() {
     { id: 'high', label: 'High Priority', color: Colors.error, description: 'Urgent, immediate attention' }
   ];
 
+  const generateTicketId = () => {
+    return 'TKT-' + Date.now().toString().slice(-6) + Math.random().toString(36).substr(2, 3).toUpperCase();
+  };
+
+  const assignTechSupport = (supportType: SupportType) => {
+    const itTechs = ['Alex Johnson', 'Sarah Chen', 'Mike Rodriguez', 'Emily Davis'];
+    const cyberTechs = ['David Kim', 'Lisa Wang', 'James Wilson', 'Maria Garcia'];
+    
+    const techs = supportType === 'it' ? itTechs : cyberTechs;
+    return techs[Math.floor(Math.random() * techs.length)];
+  };
+
   const handleSubmit = async () => {
     if (!form.title.trim() || !form.description.trim()) {
       Alert.alert('Missing Information', 'Please fill in all required fields.');
@@ -51,20 +73,111 @@ export default function NewTicketScreen() {
 
     setIsSubmitting(true);
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const ticketId = generateTicketId();
+      const assignedTech = assignTechSupport(form.supportType);
+      
+      // Simulate API call with ticket creation
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      console.log('Ticket created:', {
+        id: ticketId,
+        ...form,
+        assignedTo: assignedTech,
+        status: 'open',
+        createdAt: new Date().toISOString(),
+        userId: user?.id
+      });
+      
       setIsSubmitting(false);
+      
       Alert.alert(
-        'Ticket Created',
-        'Your support ticket has been created successfully. You will receive updates via email.',
+        '✅ Ticket Created Successfully!',
+        `Ticket ID: ${ticketId}\n\nAssigned to: ${assignedTech}\n\nYou will receive updates via email and can track progress in your dashboard.`,
         [
           {
-            text: 'OK',
-            onPress: () => router.back()
+            text: 'View Dashboard',
+            onPress: () => {
+              router.dismissAll();
+              router.replace('/(tabs)/home');
+            }
+          },
+          {
+            text: 'Create Another',
+            style: 'cancel',
+            onPress: () => {
+              setForm({
+                supportType: 'it',
+                title: '',
+                description: '',
+                priority: 'medium',
+                urgency: 'normal',
+                attachments: []
+              });
+            }
           }
         ]
       );
-    }, 2000);
+    } catch (error) {
+      setIsSubmitting(false);
+      Alert.alert('Error', 'Failed to create ticket. Please try again.');
+    }
+  };
+
+  const handlePickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/*', 'application/pdf', 'text/*', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        copyToCacheDirectory: true,
+        multiple: true
+      });
+
+      if (!result.canceled && result.assets) {
+        const newAttachments: AttachmentFile[] = result.assets.map(asset => ({
+          uri: asset.uri,
+          name: asset.name,
+          size: asset.size || 0,
+          mimeType: asset.mimeType || 'application/octet-stream'
+        }));
+
+        // Check file size limit (10MB)
+        const oversizedFiles = newAttachments.filter(file => file.size > 10 * 1024 * 1024);
+        if (oversizedFiles.length > 0) {
+          Alert.alert('File Too Large', `Some files exceed the 10MB limit: ${oversizedFiles.map(f => f.name).join(', ')}`);
+          return;
+        }
+
+        setForm(prev => ({
+          ...prev,
+          attachments: [...prev.attachments, ...newAttachments]
+        }));
+      }
+    } catch (error) {
+      console.error('Error picking document:', error);
+      Alert.alert('Error', 'Failed to pick file. Please try again.');
+    }
+  };
+
+  const removeAttachment = (index: number) => {
+    setForm(prev => ({
+      ...prev,
+      attachments: prev.attachments.filter((_, i) => i !== index)
+    }));
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const getFileIcon = (mimeType: string) => {
+    if (mimeType.startsWith('image/')) {
+      return ImageIcon;
+    }
+    return FileText;
   };
 
   const selectedSupportType = supportTypes.find(type => type.id === form.supportType);
@@ -239,7 +352,7 @@ export default function NewTicketScreen() {
         {/* Attachments */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Attachments (Optional)</Text>
-          <TouchableOpacity style={styles.attachmentButton}>
+          <TouchableOpacity style={styles.attachmentButton} onPress={handlePickDocument}>
             <LinearGradient
               colors={[Colors.cardBackground, '#2A2A2A']}
               style={styles.attachmentGradient}
@@ -251,6 +364,43 @@ export default function NewTicketScreen() {
           <Text style={styles.attachmentNote}>
             Supported formats: JPG, PNG, PDF, DOC, TXT (Max 10MB)
           </Text>
+          
+          {/* Display selected attachments */}
+          {form.attachments.length > 0 && (
+            <View style={styles.attachmentsList}>
+              {form.attachments.map((attachment, index) => {
+                const FileIcon = getFileIcon(attachment.mimeType);
+                return (
+                  <View key={index} style={styles.attachmentItem}>
+                    <LinearGradient
+                      colors={[Colors.cardBackground, '#2A2A2A']}
+                      style={styles.attachmentItemGradient}
+                    >
+                      <View style={styles.attachmentInfo}>
+                        <View style={styles.attachmentIcon}>
+                          <FileIcon size={16} color={Colors.primary} />
+                        </View>
+                        <View style={styles.attachmentDetails}>
+                          <Text style={styles.attachmentName} numberOfLines={1}>
+                            {attachment.name}
+                          </Text>
+                          <Text style={styles.attachmentSize}>
+                            {formatFileSize(attachment.size)}
+                          </Text>
+                        </View>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.removeAttachment}
+                        onPress={() => removeAttachment(index)}
+                      >
+                        <X size={16} color={Colors.textMuted} />
+                      </TouchableOpacity>
+                    </LinearGradient>
+                  </View>
+                );
+              })}
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -439,6 +589,53 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     marginTop: 8,
     textAlign: 'center',
+  },
+  attachmentsList: {
+    marginTop: 12,
+  },
+  attachmentItem: {
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  attachmentItemGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    borderRadius: 8,
+  },
+  attachmentInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  attachmentIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    backgroundColor: Colors.primaryAlpha,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  attachmentDetails: {
+    flex: 1,
+  },
+  attachmentName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.textPrimary,
+    marginBottom: 2,
+  },
+  attachmentSize: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  removeAttachment: {
+    padding: 4,
   },
   submitContainer: {
     paddingHorizontal: 20,

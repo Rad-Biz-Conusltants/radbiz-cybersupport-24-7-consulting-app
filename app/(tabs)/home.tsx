@@ -1,39 +1,27 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Shield, AlertCircle, CheckCircle, Clock, TrendingUp, Activity, Zap, Lock } from 'lucide-react-native';
-import { useAuth } from '@/providers/auth-provider';
-import { useSubscription } from '@/providers/subscription-provider';
+import { Shield, Monitor, ArrowRight, CheckCircle, Clock, Users } from 'lucide-react-native';
+import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
 
-export default function DashboardScreen() {
-  const { user } = useAuth();
-  const { subscription } = useSubscription();
+export default function SupportSelectionScreen() {
   const insets = useSafeAreaInsets();
 
-  const securityScore = 92;
-  const threats = {
-    blocked: 147,
-    resolved: 23,
-    monitoring: 5,
+  const handleITSupport = () => {
+    router.push('/(auth)/signup?supportType=it');
   };
 
-  const recentActivity = [
-    { id: 1, type: 'success', message: 'Security scan completed', time: '2 min ago', icon: CheckCircle },
-    { id: 2, type: 'warning', message: 'Unusual login attempt blocked', time: '1 hour ago', icon: AlertCircle },
-    { id: 3, type: 'info', message: 'Firewall rules updated', time: '3 hours ago', icon: Shield },
-    { id: 4, type: 'success', message: 'Backup completed successfully', time: '5 hours ago', icon: CheckCircle },
+  const handleCybersecuritySupport = () => {
+    router.push('/(auth)/signup?supportType=cybersecurity');
+  };
+
+  const stats = [
+    { id: 'uptime', label: 'Uptime', value: '99.9%', icon: CheckCircle },
+    { id: 'response', label: 'Response Time', value: '5 min', icon: Clock },
+    { id: 'devices', label: 'Protected Devices', value: '10k+', icon: Users },
   ];
-
-  const getActivityColor = (type: string) => {
-    switch (type) {
-      case 'success': return Colors.success;
-      case 'warning': return Colors.warning;
-      case 'info': return Colors.info;
-      default: return Colors.textMuted;
-    }
-  };
 
   return (
     <LinearGradient
@@ -44,112 +32,144 @@ export default function DashboardScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.welcomeSection}>
-          <Text style={styles.welcomeText}>Welcome back, {user?.name || 'User'}</Text>
-          <Text style={styles.planText}>
-            {subscription?.plan === 'business' ? 'Small Business' : 'Individual'} Plan • {subscription?.status || 'Active'}
+        <View style={styles.header}>
+          <View style={styles.logoContainer}>
+            <Image 
+              source={require('@/assets/images/adaptive-icon.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
+          <Text style={styles.brandName}>RadBiz Security</Text>
+          <Text style={styles.tagline}>Enterprise-Grade Cybersecurity Support</Text>
+          <Text style={styles.description}>
+            24/7 IT and cybersecurity expertise at your fingertips.
+            Protect your business from threats before they happen.
           </Text>
-          {subscription?.plan === 'business' && (
-            <View style={styles.businessBadge}>
-              <Text style={styles.businessBadgeText}>🏢 Small Business Protected</Text>
-            </View>
-          )}
         </View>
 
-        <View style={styles.scoreCard}>
-          <LinearGradient
-            colors={[Colors.primary, Colors.primaryDark]}
-            style={styles.scoreGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <View style={styles.scoreHeader}>
-              <Shield size={24} color="#FFFFFF" />
-              <Text style={styles.scoreTitle}>Security Score</Text>
-            </View>
-            <Text style={styles.scoreValue}>{securityScore}%</Text>
-            <View style={styles.scoreBar}>
-              <View style={[styles.scoreProgress, { width: `${securityScore}%` }]} />
-            </View>
-            <Text style={styles.scoreStatus}>Excellent Protection</Text>
-          </LinearGradient>
-        </View>
-
-        <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: Colors.errorAlpha }]}>
-              <AlertCircle size={20} color={Colors.error} />
-            </View>
-            <Text style={styles.statValue}>{threats.blocked}</Text>
-            <Text style={styles.statLabel}>Threats Blocked</Text>
-          </View>
-          <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: Colors.successAlpha }]}>
-              <CheckCircle size={20} color={Colors.success} />
-            </View>
-            <Text style={styles.statValue}>{threats.resolved}</Text>
-            <Text style={styles.statLabel}>Issues Resolved</Text>
-          </View>
-          <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: Colors.warningAlpha }]}>
-              <Activity size={20} color={Colors.warning} />
-            </View>
-            <Text style={styles.statValue}>{threats.monitoring}</Text>
-            <Text style={styles.statLabel}>Active Monitors</Text>
-          </View>
-        </View>
-
-        <View style={styles.quickActions}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.actionsGrid}>
-            <TouchableOpacity style={styles.actionCard}>
-              <View style={[styles.actionIcon, { backgroundColor: Colors.accentAlpha }]}>
-                <Zap size={24} color={Colors.accent} />
-              </View>
-              <Text style={styles.actionText}>Quick Scan</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionCard}>
-              <View style={[styles.actionIcon, { backgroundColor: Colors.primaryAlpha }]}>
-                <Lock size={24} color={Colors.primary} />
-              </View>
-              <Text style={styles.actionText}>Security Audit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionCard}>
-              <View style={[styles.actionIcon, { backgroundColor: Colors.successAlpha }]}>
-                <Shield size={24} color={Colors.success} />
-              </View>
-              <Text style={styles.actionText}>Update Rules</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionCard}>
-              <View style={[styles.actionIcon, { backgroundColor: Colors.warningAlpha }]}>
-                <TrendingUp size={24} color={Colors.warning} />
-              </View>
-              <Text style={styles.actionText}>View Reports</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={styles.activitySection}>
-          <View style={styles.activityHeader}>
-            <Text style={styles.sectionTitle}>Recent Activity</Text>
-            <TouchableOpacity>
-              <Text style={styles.viewAllText}>View All</Text>
-            </TouchableOpacity>
-          </View>
-          {recentActivity.map((activity) => (
-            <View key={activity.id} style={styles.activityItem}>
-              <View style={[styles.activityIconContainer, { backgroundColor: getActivityColor(activity.type) + '20' }]}>
-                <activity.icon size={20} color={getActivityColor(activity.type)} />
-              </View>
-              <View style={styles.activityContent}>
-                <Text style={styles.activityMessage}>{activity.message}</Text>
-                <View style={styles.activityTime}>
-                  <Clock size={12} color={Colors.textMuted} />
-                  <Text style={styles.activityTimeText}>{activity.time}</Text>
-                </View>
-              </View>
+        <View style={styles.statsContainer}>
+          {stats.map((stat) => (
+            <View key={stat.id} style={styles.statItem}>
+              <stat.icon size={20} color={Colors.primary} />
+              <Text style={styles.statValue}>{stat.value}</Text>
+              <Text style={styles.statLabel}>{stat.label}</Text>
             </View>
           ))}
+        </View>
+
+        <View style={styles.supportOptions}>
+          <Text style={styles.sectionTitle}>Which support do you need?</Text>
+          
+          <TouchableOpacity 
+            style={styles.supportCard}
+            onPress={handleITSupport}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={[Colors.cardBackground, '#2A2A2A']}
+              style={styles.cardGradient}
+            >
+              <View style={styles.cardHeader}>
+                <View style={[styles.cardIcon, { backgroundColor: Colors.accentAlpha }]}>
+                  <Monitor size={32} color={Colors.accent} />
+                </View>
+                <View style={styles.cardContent}>
+                  <Text style={styles.cardTitle}>IT Support</Text>
+                  <Text style={styles.cardSubtitle}>Technical assistance & infrastructure management</Text>
+                </View>
+                <ArrowRight size={24} color={Colors.textMuted} />
+              </View>
+              
+              <View style={styles.cardFeatures}>
+                <Text style={styles.featureText}>• 24/7 Help Desk Support</Text>
+                <Text style={styles.featureText}>• Network & Server Management</Text>
+                <Text style={styles.featureText}>• Software Installation & Updates</Text>
+                <Text style={styles.featureText}>• Hardware Troubleshooting</Text>
+              </View>
+              
+              <View style={styles.cardFooter}>
+                <TouchableOpacity 
+                  style={styles.trialButton}
+                  onPress={handleITSupport}
+                >
+                  <LinearGradient
+                    colors={[Colors.accent, Colors.accentDark]}
+                    style={styles.trialGradient}
+                  >
+                    <Text style={styles.trialButtonText}>Start Free Trial</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.supportCard}
+            onPress={handleCybersecuritySupport}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={[Colors.cardBackground, '#2A2A2A']}
+              style={styles.cardGradient}
+            >
+              <View style={styles.cardHeader}>
+                <View style={[styles.cardIcon, { backgroundColor: Colors.primaryAlpha }]}>
+                  <Shield size={32} color={Colors.primary} />
+                </View>
+                <View style={styles.cardContent}>
+                  <Text style={styles.cardTitle}>Cybersecurity Support</Text>
+                  <Text style={styles.cardSubtitle}>Advanced threat protection & security monitoring</Text>
+                </View>
+                <ArrowRight size={24} color={Colors.textMuted} />
+              </View>
+              
+              <View style={styles.cardFeatures}>
+                <Text style={styles.featureText}>• Real-time Threat Monitoring</Text>
+                <Text style={styles.featureText}>• Vulnerability Assessments</Text>
+                <Text style={styles.featureText}>• Incident Response & Recovery</Text>
+                <Text style={styles.featureText}>• Security Policy Development</Text>
+              </View>
+              
+              <View style={styles.cardFooter}>
+                <TouchableOpacity 
+                  style={styles.trialButton}
+                  onPress={handleCybersecuritySupport}
+                >
+                  <LinearGradient
+                    colors={[Colors.primary, Colors.primaryDark]}
+                    style={styles.trialGradient}
+                  >
+                    <Text style={styles.trialButtonText}>Start Free Trial</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.whyChoose}>
+          <Text style={styles.whyTitle}>Why Choose RadBiz?</Text>
+          <View style={styles.benefitsList}>
+            <View style={styles.benefitItem}>
+              <View style={[styles.benefitIcon, { backgroundColor: Colors.primaryAlpha }]}>
+                <Shield size={20} color={Colors.primary} />
+              </View>
+              <Text style={styles.benefitText}>24/7 Protection</Text>
+            </View>
+            <View style={styles.benefitItem}>
+              <View style={[styles.benefitIcon, { backgroundColor: Colors.accentAlpha }]}>
+                <Monitor size={20} color={Colors.accent} />
+              </View>
+              <Text style={styles.benefitText}>Expert IT Team</Text>
+            </View>
+            <View style={styles.benefitItem}>
+              <View style={[styles.benefitIcon, { backgroundColor: Colors.successAlpha }]}>
+                <CheckCircle size={20} color={Colors.success} />
+              </View>
+              <Text style={styles.benefitText}>Proven Results</Text>
+            </View>
+          </View>
         </View>
       </ScrollView>
     </LinearGradient>
@@ -164,85 +184,63 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 40,
   },
-  welcomeSection: {
-    marginBottom: 24,
-  },
-  welcomeText: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: 4,
-  },
-  planText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
-  scoreCard: {
-    marginBottom: 24,
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  scoreGradient: {
-    padding: 24,
-  },
-  scoreHeader: {
-    flexDirection: 'row',
+  header: {
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 16,
-  },
-  scoreTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-  },
-  scoreValue: {
-    fontSize: 48,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-    marginBottom: 12,
-  },
-  scoreBar: {
-    height: 8,
-    backgroundColor: '#FFFFFF30',
-    borderRadius: 4,
-    marginBottom: 12,
-  },
-  scoreProgress: {
-    height: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 4,
-  },
-  scoreStatus: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    gap: 12,
     marginBottom: 32,
   },
-  statCard: {
-    flex: 1,
+  logoContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
     backgroundColor: Colors.cardBackground,
-    borderRadius: 16,
-    padding: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: Colors.cardBorder,
   },
-  statIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+  logo: {
+    width: 60,
+    height: 60,
+  },
+  brandName: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: Colors.textPrimary,
     marginBottom: 8,
+  },
+  tagline: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.primary,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  description: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 24,
+    paddingHorizontal: 20,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 40,
+    paddingVertical: 20,
+    backgroundColor: Colors.cardBackground,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  statItem: {
+    alignItems: 'center',
   },
   statValue: {
     fontSize: 24,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: Colors.primary,
+    marginTop: 8,
     marginBottom: 4,
   },
   statLabel: {
@@ -250,103 +248,111 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
   },
-  quickActions: {
-    marginBottom: 32,
+  supportOptions: {
+    marginBottom: 40,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 24,
+    fontWeight: '700',
     color: Colors.textPrimary,
-    marginBottom: 16,
+    marginBottom: 24,
+    textAlign: 'center',
   },
-  actionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
+  supportCard: {
+    marginBottom: 20,
+    borderRadius: 20,
+    overflow: 'hidden',
   },
-  actionCard: {
-    width: '48%',
-    backgroundColor: Colors.cardBackground,
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
+  cardGradient: {
+    padding: 24,
     borderWidth: 1,
     borderColor: Colors.cardBorder,
+    borderRadius: 20,
   },
-  actionIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+  cardHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  actionText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-  },
-  activitySection: {
     marginBottom: 20,
   },
-  activityHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  viewAllText: {
-    fontSize: 14,
-    color: Colors.accent,
-    fontWeight: '600',
-  },
-  activityItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.cardBackground,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-  },
-  activityIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+  cardIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 16,
   },
-  activityContent: {
+  cardContent: {
     flex: 1,
   },
-  activityMessage: {
-    fontSize: 14,
-    fontWeight: '500',
+  cardTitle: {
+    fontSize: 20,
+    fontWeight: '700',
     color: Colors.textPrimary,
     marginBottom: 4,
   },
-  activityTime: {
-    flexDirection: 'row',
+  cardSubtitle: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+  },
+  cardFeatures: {
+    marginBottom: 24,
+  },
+  featureText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 8,
+    lineHeight: 20,
+  },
+  cardFooter: {
     alignItems: 'center',
-    gap: 4,
   },
-  activityTimeText: {
-    fontSize: 12,
-    color: Colors.textMuted,
+  trialButton: {
+    width: '100%',
   },
-  businessBadge: {
-    backgroundColor: Colors.successAlpha,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginTop: 8,
-    alignSelf: 'flex-start',
+  trialGradient: {
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  businessBadgeText: {
-    fontSize: 12,
+  trialButtonText: {
+    color: Colors.textPrimary,
+    fontSize: 16,
     fontWeight: '600',
-    color: Colors.success,
+  },
+  whyChoose: {
+    alignItems: 'center',
+  },
+  whyTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  benefitsList: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+  },
+  benefitItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  benefitIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  benefitText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    textAlign: 'center',
   },
 });

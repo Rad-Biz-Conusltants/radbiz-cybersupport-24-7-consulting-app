@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Shield, Mail, Lock, User, ArrowLeft, Building } from 'lucide-react-native';
-import { router } from 'expo-router';
+import { Shield, Mail, Lock, User, ArrowLeft, Building, Monitor } from 'lucide-react-native';
+import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/providers/auth-provider';
 import Colors from '@/constants/colors';
 
 export default function SignupScreen() {
+  const { supportType } = useLocalSearchParams<{ supportType?: string }>();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -15,6 +16,32 @@ export default function SignupScreen() {
   const [planType, setPlanType] = useState<'individual' | 'business'>('individual');
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
+
+  const getSupportTypeInfo = () => {
+    if (supportType === 'it') {
+      return {
+        title: 'IT Support',
+        subtitle: 'Technical assistance & infrastructure management',
+        icon: Monitor,
+        color: Colors.accent,
+      };
+    } else if (supportType === 'cybersecurity') {
+      return {
+        title: 'Cybersecurity Support',
+        subtitle: 'Advanced threat protection & security monitoring',
+        icon: Shield,
+        color: Colors.primary,
+      };
+    }
+    return {
+      title: 'RadBiz Security',
+      subtitle: 'Enterprise-Grade Support',
+      icon: Shield,
+      color: Colors.primary,
+    };
+  };
+
+  const supportInfo = getSupportTypeInfo();
 
   const handleSignup = async () => {
     if (!name || !email || !password) {
@@ -61,11 +88,12 @@ export default function SignupScreen() {
             </TouchableOpacity>
 
             <View style={styles.header}>
-              <View style={styles.logoContainer}>
-                <Shield size={48} color={Colors.primary} />
+              <View style={[styles.logoContainer, { backgroundColor: supportInfo.color + '20' }]}>
+                <supportInfo.icon size={48} color={supportInfo.color} />
               </View>
-              <Text style={styles.title}>Create Account</Text>
-              <Text style={styles.subtitle}>Start your 14-day free trial</Text>
+              <Text style={styles.title}>{supportInfo.title}</Text>
+              <Text style={styles.subtitle}>{supportInfo.subtitle}</Text>
+              <Text style={styles.trialText}>Start your 14-day free trial</Text>
             </View>
 
             <View style={styles.form}>
@@ -214,21 +242,30 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 20,
-    backgroundColor: Colors.cardBackground,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '700',
     color: Colors.textPrimary,
     marginBottom: 8,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: Colors.textSecondary,
     textAlign: 'center',
+    marginBottom: 8,
+  },
+  trialText: {
+    fontSize: 16,
+    color: Colors.primary,
+    textAlign: 'center',
+    fontWeight: '600',
   },
   form: {
     flex: 1,

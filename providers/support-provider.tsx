@@ -161,11 +161,12 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
   useEffect(() => {
     const interval = setInterval(() => {
       setAgents(prev => prev.map(agent => {
-        // Randomly change agent status occasionally
-        if (Math.random() < 0.1) {
-          const statuses: ('online' | 'busy' | 'offline')[] = ['online', 'busy', 'offline'];
-          const currentIndex = statuses.indexOf(agent.status);
-          const newStatus = statuses[(currentIndex + 1) % statuses.length];
+        // Randomly change agent status occasionally (less frequently)
+        if (Math.random() < 0.05) { // Reduced from 0.1 to 0.05
+          // Keep most agents online or busy, rarely offline
+          const newStatus: 'online' | 'busy' | 'offline' = Math.random() < 0.8 ? 'online' : Math.random() < 0.95 ? 'busy' : 'offline';
+          
+          console.log(`Agent ${agent.name} status changed to ${newStatus}`);
           
           return {
             ...agent,
@@ -176,7 +177,7 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
         }
         return agent;
       }));
-    }, 30000); // Check every 30 seconds
+    }, 45000); // Check every 45 seconds (increased from 30)
 
     return () => clearInterval(interval);
   }, []);
@@ -249,6 +250,8 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
   }, [getQueuePosition]);
 
   const addToQueue = useCallback(async (session: ChatSession): Promise<void> => {
+    console.log(`Adding session ${session.id} to queue with priority ${session.priority}`);
+    
     const queueItem: QueueItem = {
       id: `queue_${Date.now()}`,
       sessionId: session.id,
@@ -257,23 +260,29 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
       timestamp: new Date(),
     };
 
-    setQueue(prev => [...prev, queueItem]);
+    setQueue(prev => {
+      const newQueue = [...prev, queueItem];
+      console.log(`Queue now has ${newQueue.length} items`);
+      return newQueue;
+    });
     
     // Update session with queue info after a short delay to ensure proper positioning
     setTimeout(() => {
-      const position = getQueuePosition(session.id) + 1;
+      const position = getQueuePosition(session.id);
       const waitTime = getEstimatedWaitTime(session.id);
+      
+      console.log(`Session ${session.id} queue position: ${position + 1}, estimated wait: ${waitTime} min`);
       
       setActiveSessions(prev => prev.map(s => 
         s.id === session.id 
-          ? { ...s, queuePosition: position, estimatedWaitTime: waitTime }
+          ? { ...s, queuePosition: position + 1, estimatedWaitTime: waitTime }
           : s
       ));
       
       if (currentSession?.id === session.id) {
         setCurrentSession(prev => prev ? {
           ...prev,
-          queuePosition: position,
+          queuePosition: position + 1,
           estimatedWaitTime: waitTime
         } : null);
       }
@@ -281,18 +290,32 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
   }, [getQueuePosition, getEstimatedWaitTime, currentSession]);
 
   const connectToAgent = useCallback(async (sessionId: string): Promise<boolean> => {
+    console.log(`Attempting to connect session ${sessionId} to agent`);
     setIsConnecting(true);
     
     const session = activeSessions.find(s => s.id === sessionId);
     if (!session) {
+      console.log(`Session ${sessionId} not found`);
       setIsConnecting(false);
       return false;
     }
 
     const agent = findBestAgent(session.type);
     if (!agent || agent.currentChats >= agent.maxChats) {
+      console.log(`No available agent found for session type: ${session.type}`);
       setIsConnecting(false);
       return false;
+    }
+
+    console.log(`Connecting to agent: ${agent.name}`);
+    
+    // Update session to connecting status first
+    setActiveSessions(prev => prev.map(s => 
+      s.id === sessionId ? { ...s, status: 'connecting' as const } : s
+    ));
+    
+    if (currentSession?.id === sessionId) {
+      setCurrentSession(prev => prev ? { ...prev, status: 'connecting' as const } : null);
     }
 
     // Simulate connection delay
@@ -305,23 +328,22 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
         : a
     ));
 
-    // Update session
+    // Update session to active
+    const welcomeMessage: ChatMessage = {
+      id: `msg_${Date.now()}`,
+      text: `Hello! I'm ${agent.name}, and I'll be assisting you today. How can I help you?`,
+      sender: 'agent',
+      timestamp: new Date(),
+      agentName: agent.name,
+      type: 'system'
+    };
+
     const updatedSession: ChatSession = {
       ...session,
       agentId: agent.id,
       agentName: agent.name,
       status: 'active',
-      messages: [
-        ...session.messages,
-        {
-          id: `msg_${Date.now()}`,
-          text: `Hello! I'm ${agent.name}, and I'll be assisting you today. How can I help you?`,
-          sender: 'agent',
-          timestamp: new Date(),
-          agentName: agent.name,
-          type: 'system'
-        }
-      ]
+      messages: [...session.messages, welcomeMessage]
     };
 
     setActiveSessions(prev => prev.map(s => s.id === sessionId ? updatedSession : s));
@@ -329,6 +351,8 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
     
     // Remove from queue if it was queued
     removeFromQueue(sessionId);
+    
+    console.log(`Successfully connected session ${sessionId} to agent ${agent.name}`);
     
     // Handle special session types
     if (session.type === 'remote-assistance') {
@@ -365,6 +389,8 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
     const sessionId = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const priority = type === 'urgent' ? 3 : type === 'remote-assistance' ? 2 : 1;
     
+    console.log(`Creating new chat session: ${sessionId}, type: ${type}, priority: ${priority}`);
+    
     const session: ChatSession = {
       id: sessionId,
       agentId: '',
@@ -387,9 +413,11 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
     // Try to find an available agent immediately
     const agent = findBestAgent(type);
     if (agent && agent.currentChats < agent.maxChats) {
+      console.log(`Found available agent immediately: ${agent.name}`);
       // Connect immediately
-      setTimeout(() => connectToAgent(sessionId), 100);
+      setTimeout(() => connectToAgent(sessionId), 500);
     } else {
+      console.log(`No available agents - adding to queue`);
       // Add to queue and update session status
       session.status = 'queued';
       await addToQueue(session);
@@ -403,6 +431,8 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
     const processQueue = () => {
       if (queue.length === 0) return;
 
+      console.log(`Processing queue with ${queue.length} items`);
+
       const sortedQueue = [...queue].sort((a, b) => {
         // Sort by priority first, then by timestamp
         if (a.priority !== b.priority) {
@@ -413,24 +443,40 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
 
       for (const queueItem of sortedQueue) {
         const session = activeSessions.find(s => s.id === queueItem.sessionId);
-        if (!session || session.status !== 'queued') continue;
+        if (!session || session.status !== 'queued') {
+          console.log(`Skipping queue item - session not found or not queued: ${queueItem.sessionId}`);
+          continue;
+        }
 
         const agent = findBestAgent(queueItem.type);
         if (agent && agent.currentChats < agent.maxChats) {
+          console.log(`Found available agent ${agent.name} for queued session ${session.id}`);
           // Assign agent to session
           connectToAgent(session.id);
           break; // Process one at a time
+        } else {
+          console.log(`No available agent for session type: ${queueItem.type}`);
         }
       }
     };
 
-    const interval = setInterval(processQueue, 5000); // Check every 5 seconds
+    const interval = setInterval(processQueue, 3000); // Check every 3 seconds
     return () => clearInterval(interval);
   }, [queue, activeSessions, findBestAgent, connectToAgent]);
 
   const sendMessage = useCallback(async (sessionId: string, message: string): Promise<void> => {
     const session = activeSessions.find(s => s.id === sessionId);
-    if (!session || session.status !== 'active') return;
+    if (!session) {
+      console.log(`Session ${sessionId} not found for message sending`);
+      return;
+    }
+    
+    if (session.status !== 'active') {
+      console.log(`Cannot send message - session ${sessionId} status is ${session.status}`);
+      return;
+    }
+
+    console.log(`Sending message in session ${sessionId}: ${message.substring(0, 50)}...`);
 
     const newMessage: ChatMessage = {
       id: `msg_${Date.now()}`,
@@ -459,7 +505,10 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
         "Thank you for providing that information. I'm looking into this now.",
         "I see what you mean. Let me check our system for the best solution.",
         "That's a great question. I'll walk you through the solution step by step.",
-        "I've reviewed your request and I have a solution for you."
+        "I've reviewed your request and I have a solution for you.",
+        "Let me investigate this issue further and get back to you with a solution.",
+        "I can definitely help you with that. Let me walk you through the process.",
+        "Thanks for the details. I'm working on resolving this for you now."
       ];
       
       const agentResponse: ChatMessage = {
@@ -542,7 +591,7 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
       // Add queue acknowledgment message
       const queueMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
-        text: "All our support agents are currently busy helping other customers. You've been added to the queue and will be connected to the next available agent. Your estimated wait time is 3-5 minutes.",
+        text: "All our support agents are currently busy helping other customers. You've been added to the queue and will be connected to the next available agent. We'll notify you as soon as someone is available. Thank you for your patience!",
         sender: 'agent',
         timestamp: new Date(),
         agentName: 'Support System',
@@ -580,7 +629,7 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
       // Add queue acknowledgment message
       const queueMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
-        text: "All our remote assistance specialists are currently busy. You've been added to our priority queue for remote support. A specialist will connect with you shortly and initiate TeamViewer access. Estimated wait time: 2-4 minutes.",
+        text: "All our remote assistance specialists are currently busy. You've been added to our priority queue for remote support. A specialist will connect with you shortly and initiate TeamViewer access for remote assistance.",
         sender: 'agent',
         timestamp: new Date(),
         agentName: 'Remote Support System',
@@ -618,7 +667,7 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
       // Add urgent queue acknowledgment message
       const queueMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
-        text: "🚨 URGENT REQUEST RECEIVED: All our senior specialists are currently handling critical issues. You've been placed at the front of our priority queue. Our best available agent will connect with you within 1-2 minutes. Thank you for your patience.",
+        text: "🚨 URGENT REQUEST RECEIVED: All our senior specialists are currently handling critical issues. You've been placed at the front of our priority queue. Our best available agent will connect with you as soon as possible.",
         sender: 'agent',
         timestamp: new Date(),
         agentName: 'Priority Support System',
@@ -663,7 +712,7 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
       // Add queue acknowledgment message for quick messages
       const queueMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
-        text: "Thank you for your message! All our support agents are currently assisting other customers. Your message has been received and you've been added to the queue. An agent will respond to your message shortly. Estimated wait time: 3-5 minutes.",
+        text: "Thank you for your message! All our support agents are currently assisting other customers. Your message has been received and you've been added to the queue. An agent will respond to your message as soon as possible.",
         sender: 'agent',
         timestamp: new Date(),
         agentName: 'Support System',

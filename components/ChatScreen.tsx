@@ -68,8 +68,13 @@ export default function ChatScreen({ visible, onClose, session }: ChatScreenProp
   };
 
   const handleVoiceCall = () => {
-    if (!session || session.status !== 'active') {
-      Alert.alert('Call Unavailable', 'Voice calls are only available during active chat sessions.');
+    if (!session) {
+      Alert.alert('Error', 'No active session found.');
+      return;
+    }
+    
+    if (session.status !== 'active') {
+      Alert.alert('Call Unavailable', 'Voice calls are only available during active chat sessions. Please wait to be connected to an agent.');
       return;
     }
     
@@ -82,8 +87,8 @@ export default function ChatScreen({ visible, onClose, session }: ChatScreenProp
           text: 'Request Call', 
           onPress: async () => {
             try {
-              await sendMessage(session.id, '📞 Voice call requested');
-              Alert.alert('Call Requested', 'Your agent will call you shortly.');
+              await sendMessage(session.id, '📞 Voice call requested - Please call me at your earliest convenience.');
+              Alert.alert('Call Requested', `${session.agentName} has been notified of your call request and will contact you shortly.`);
             } catch (error) {
               console.error('Failed to request call:', error);
               Alert.alert('Error', 'Failed to request call. Please try again.');
@@ -95,8 +100,13 @@ export default function ChatScreen({ visible, onClose, session }: ChatScreenProp
   };
 
   const handleVideoCall = () => {
-    if (!session || session.status !== 'active') {
-      Alert.alert('Video Call Unavailable', 'Video calls are only available during active chat sessions.');
+    if (!session) {
+      Alert.alert('Error', 'No active session found.');
+      return;
+    }
+    
+    if (session.status !== 'active') {
+      Alert.alert('Video Call Unavailable', 'Video calls are only available during active chat sessions. Please wait to be connected to an agent.');
       return;
     }
     
@@ -109,8 +119,8 @@ export default function ChatScreen({ visible, onClose, session }: ChatScreenProp
           text: 'Request Video Call', 
           onPress: async () => {
             try {
-              await sendMessage(session.id, '📹 Video call requested');
-              Alert.alert('Video Call Requested', 'Your agent will start a video call shortly.');
+              await sendMessage(session.id, '📹 Video call requested - Please start a video session when convenient.');
+              Alert.alert('Video Call Requested', `${session.agentName} has been notified and will start a video call shortly.`);
             } catch (error) {
               console.error('Failed to request video call:', error);
               Alert.alert('Error', 'Failed to request video call. Please try again.');
@@ -122,6 +132,16 @@ export default function ChatScreen({ visible, onClose, session }: ChatScreenProp
   };
 
   const handleAttachmentPress = () => {
+    if (!session) {
+      Alert.alert('Error', 'No active session found.');
+      return;
+    }
+    
+    if (session.status !== 'active') {
+      Alert.alert('Attachment Unavailable', 'File attachments are only available during active chat sessions. Please wait to be connected to an agent.');
+      return;
+    }
+    
     setShowAttachmentOptions(true);
   };
 
@@ -143,11 +163,11 @@ export default function ChatScreen({ visible, onClose, session }: ChatScreenProp
         quality: 0.8,
       });
 
-      if (!result.canceled && result.assets[0]) {
+      if (!result.canceled && result.assets[0] && session) {
         const asset = result.assets[0];
         const fileName = asset.fileName || 'image.jpg';
-        await sendMessage(session!.id, `📷 Image shared: ${fileName}`);
-        Alert.alert('Image Shared', 'Your image has been sent to the agent.');
+        await sendMessage(session.id, `📷 Image shared: ${fileName} - Please let me know if you can see the image clearly.`);
+        Alert.alert('Image Shared', `Your image "${fileName}" has been sent to ${session.agentName}.`);
       }
     } catch (error) {
       console.error('Failed to pick image:', error);
@@ -164,10 +184,10 @@ export default function ChatScreen({ visible, onClose, session }: ChatScreenProp
         copyToCacheDirectory: true,
       });
 
-      if (!result.canceled && result.assets[0]) {
+      if (!result.canceled && result.assets[0] && session) {
         const asset = result.assets[0];
-        await sendMessage(session!.id, `📎 File shared: ${asset.name}`);
-        Alert.alert('File Shared', 'Your file has been sent to the agent.');
+        await sendMessage(session.id, `📎 File shared: ${asset.name} - File size: ${(asset.size || 0 / 1024).toFixed(1)}KB`);
+        Alert.alert('File Shared', `Your file "${asset.name}" has been sent to ${session.agentName}.`);
       }
     } catch (error) {
       console.error('Failed to pick document:', error);
@@ -375,12 +395,12 @@ export default function ChatScreen({ visible, onClose, session }: ChatScreenProp
             <View style={styles.chatInputRow}>
               <TouchableOpacity 
                 style={[styles.attachButton, {
-                  opacity: session.status === 'active' ? 1 : 0.5
+                  opacity: session.status === 'active' ? 1 : 0.3
                 }]}
                 onPress={handleAttachmentPress}
                 disabled={session.status !== 'active'}
               >
-                <Paperclip size={18} color={Colors.textMuted} />
+                <Paperclip size={18} color={session.status === 'active' ? Colors.primary : Colors.textMuted} />
               </TouchableOpacity>
               <TextInput
                 style={styles.chatTextInput}

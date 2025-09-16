@@ -8,7 +8,6 @@ import { AuthProvider } from "@/providers/auth-provider";
 import { SubscriptionProvider } from "@/providers/subscription-provider";
 import { TicketsProvider } from "@/providers/tickets-provider";
 import { UsersProvider } from "@/providers/users-provider";
-import { SupportProvider } from "@/providers/support-provider";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -53,9 +52,7 @@ export default function RootLayout() {
           <SubscriptionProvider>
             <TicketsProvider>
               <UsersProvider>
-                <SupportProvider>
-                  <RootLayoutNav />
-                </SupportProvider>
+                <RootLayoutNav />
               </UsersProvider>
             </TicketsProvider>
           </SubscriptionProvider>

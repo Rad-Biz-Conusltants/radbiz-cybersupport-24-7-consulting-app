@@ -328,10 +328,10 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
         : a
     ));
 
-    // Update session to active
+    // Update session to active with agent welcome message
     const welcomeMessage: ChatMessage = {
       id: `msg_${Date.now()}`,
-      text: `Hello! I'm ${agent.name}, and I'll be assisting you today. How can I help you?`,
+      text: `Hello! I'm ${agent.name}, your assigned tech support specialist. I'm here to help you with any technical issues you may have. How can I assist you today?`,
       sender: 'agent',
       timestamp: new Date(),
       agentName: agent.name,
@@ -391,18 +391,35 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
     
     console.log(`Creating new chat session: ${sessionId}, type: ${type}, priority: ${priority}`);
     
+    // Create initial greeting message
+    const greetingMessage: ChatMessage = {
+      id: `msg_${Date.now()}`,
+      text: "Hello! Welcome to our support chat. We're finding the next available tech support agent for you. Please wait a moment...",
+      sender: 'agent',
+      timestamp: new Date(),
+      agentName: 'Support System',
+      type: 'system'
+    };
+    
+    const messages: ChatMessage[] = [greetingMessage];
+    
+    // Add initial user message if provided
+    if (initialMessage) {
+      messages.push({
+        id: `msg_${Date.now() + 1}`,
+        text: initialMessage,
+        sender: 'user',
+        timestamp: new Date()
+      });
+    }
+    
     const session: ChatSession = {
       id: sessionId,
       agentId: '',
       agentName: '',
       type,
       status: 'queued',
-      messages: initialMessage ? [{
-        id: `msg_${Date.now()}`,
-        text: initialMessage,
-        sender: 'user',
-        timestamp: new Date()
-      }] : [],
+      messages,
       startTime: new Date(),
       priority
     };
@@ -415,7 +432,7 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
     if (agent && agent.currentChats < agent.maxChats) {
       console.log(`Found available agent immediately: ${agent.name}`);
       // Connect immediately
-      setTimeout(() => connectToAgent(sessionId), 500);
+      setTimeout(() => connectToAgent(sessionId), 1000);
     } else {
       console.log(`No available agents - adding to queue`);
       // Add to queue and update session status
@@ -470,11 +487,6 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
       console.log(`Session ${sessionId} not found for message sending`);
       return;
     }
-    
-    if (session.status !== 'active') {
-      console.log(`Cannot send message - session ${sessionId} status is ${session.status}`);
-      return;
-    }
 
     console.log(`Sending message in session ${sessionId}: ${message.substring(0, 50)}...`);
 
@@ -498,40 +510,42 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
       } : null);
     }
 
-    // Simulate agent response
-    setTimeout(() => {
-      const responses = [
-        "I understand your concern. Let me help you with that right away.",
-        "Thank you for providing that information. I'm looking into this now.",
-        "I see what you mean. Let me check our system for the best solution.",
-        "That's a great question. I'll walk you through the solution step by step.",
-        "I've reviewed your request and I have a solution for you.",
-        "Let me investigate this issue further and get back to you with a solution.",
-        "I can definitely help you with that. Let me walk you through the process.",
-        "Thanks for the details. I'm working on resolving this for you now."
-      ];
-      
-      const agentResponse: ChatMessage = {
-        id: `msg_${Date.now() + 1}`,
-        text: responses[Math.floor(Math.random() * responses.length)],
-        sender: 'agent',
-        timestamp: new Date(),
-        agentName: session.agentName
-      };
-      
-      setActiveSessions(prev => prev.map(s => 
-        s.id === sessionId 
-          ? { ...s, messages: [...s.messages, agentResponse] }
-          : s
-      ));
-      
-      if (currentSession?.id === sessionId) {
-        setCurrentSession(prev => prev ? {
-          ...prev,
-          messages: [...prev.messages, agentResponse]
-        } : null);
-      }
-    }, 1500 + Math.random() * 2000); // Random delay between 1.5-3.5 seconds
+    // Only simulate agent response if session is active
+    if (session.status === 'active') {
+      setTimeout(() => {
+        const responses = [
+          "I understand your concern. Let me help you with that right away.",
+          "Thank you for providing that information. I'm looking into this now.",
+          "I see what you mean. Let me check our system for the best solution.",
+          "That's a great question. I'll walk you through the solution step by step.",
+          "I've reviewed your request and I have a solution for you.",
+          "Let me investigate this issue further and get back to you with a solution.",
+          "I can definitely help you with that. Let me walk you through the process.",
+          "Thanks for the details. I'm working on resolving this for you now."
+        ];
+        
+        const agentResponse: ChatMessage = {
+          id: `msg_${Date.now() + 1}`,
+          text: responses[Math.floor(Math.random() * responses.length)],
+          sender: 'agent',
+          timestamp: new Date(),
+          agentName: session.agentName
+        };
+        
+        setActiveSessions(prev => prev.map(s => 
+          s.id === sessionId 
+            ? { ...s, messages: [...s.messages, agentResponse] }
+            : s
+        ));
+        
+        if (currentSession?.id === sessionId) {
+          setCurrentSession(prev => prev ? {
+            ...prev,
+            messages: [...prev.messages, agentResponse]
+          } : null);
+        }
+      }, 1500 + Math.random() * 2000); // Random delay between 1.5-3.5 seconds
+    }
   }, [activeSessions, currentSession]);
 
   const endChatSession = useCallback(async (sessionId: string): Promise<void> => {
@@ -582,42 +596,36 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
 
   // Quick action functions
   const findNextAvailableSupport = useCallback(async (): Promise<ChatSession | null> => {
-    const agent = findBestAgent('general');
+    console.log('Finding next available support agent...');
+    const session = await createChatSession('general');
     
-    if (!agent) {
-      console.log('No agents available - adding to queue');
-      const session = await createChatSession('general', 'Looking for next available support agent...');
-      
-      // Add queue acknowledgment message
-      const queueMessage: ChatMessage = {
+    // Add a status update message after the initial greeting
+    setTimeout(() => {
+      const statusMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
-        text: "All our support agents are currently busy helping other customers. You've been added to the queue and will be connected to the next available agent. We'll notify you as soon as someone is available. Thank you for your patience!",
+        text: "Searching for the next available tech support agent...",
         sender: 'agent',
         timestamp: new Date(),
         agentName: 'Support System',
         type: 'system'
       };
       
-      setTimeout(() => {
-        setActiveSessions(prev => prev.map(s => 
-          s.id === session.id 
-            ? { ...s, messages: [...s.messages, queueMessage] }
-            : s
-        ));
-        
-        if (currentSession?.id === session.id) {
-          setCurrentSession(prev => prev ? {
-            ...prev,
-            messages: [...prev.messages, queueMessage]
-          } : null);
-        }
-      }, 1000);
+      setActiveSessions(prev => prev.map(s => 
+        s.id === session.id 
+          ? { ...s, messages: [...s.messages, statusMessage] }
+          : s
+      ));
       
-      return session;
-    }
+      if (currentSession?.id === session.id) {
+        setCurrentSession(prev => prev ? {
+          ...prev,
+          messages: [...prev.messages, statusMessage]
+        } : null);
+      }
+    }, 1500);
     
-    return await createChatSession('general');
-  }, [findBestAgent, createChatSession, currentSession]);
+    return session;
+  }, [createChatSession, currentSession]);
 
   const requestRemoteAssistance = useCallback(async (): Promise<ChatSession | null> => {
     const agent = findBestAgent('remote-assistance');

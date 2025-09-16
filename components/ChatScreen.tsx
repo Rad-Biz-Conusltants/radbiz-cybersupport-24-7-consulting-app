@@ -36,7 +36,12 @@ export default function ChatScreen({ visible, onClose, session }: ChatScreenProp
     setMessage('');
     
     try {
-      await sendMessage(session.id, messageText);
+      if (session.status === 'active') {
+        await sendMessage(session.id, messageText);
+      } else {
+        // For queued sessions, add message to session but don't send to agent yet
+        await sendMessage(session.id, messageText);
+      }
     } catch (error) {
       console.error('Failed to send message:', error);
       Alert.alert('Error', 'Failed to send message. Please try again.');
@@ -134,11 +139,6 @@ export default function ChatScreen({ visible, onClose, session }: ChatScreenProp
   const handleAttachmentPress = () => {
     if (!session) {
       Alert.alert('Error', 'No active session found.');
-      return;
-    }
-    
-    if (session.status !== 'active') {
-      Alert.alert('Attachment Unavailable', 'File attachments are only available during active chat sessions. Please wait to be connected to an agent.');
       return;
     }
     
@@ -394,30 +394,27 @@ export default function ChatScreen({ visible, onClose, session }: ChatScreenProp
           <View style={[styles.chatInputContainer, { paddingBottom: insets.bottom + 10 }]}>
             <View style={styles.chatInputRow}>
               <TouchableOpacity 
-                style={[styles.attachButton, {
-                  opacity: session.status === 'active' ? 1 : 0.3
-                }]}
+                style={styles.attachButton}
                 onPress={handleAttachmentPress}
-                disabled={session.status !== 'active'}
               >
-                <Paperclip size={18} color={session.status === 'active' ? Colors.primary : Colors.textMuted} />
+                <Paperclip size={18} color={Colors.primary} />
               </TouchableOpacity>
               <TextInput
                 style={styles.chatTextInput}
-                placeholder="Type your message..."
+                placeholder={session.status === 'active' ? "Type your message..." : "Type your message (will be sent when connected)..."}
                 placeholderTextColor={Colors.textMuted}
                 value={message}
                 onChangeText={setMessage}
                 multiline
-                editable={session.status === 'active'}
+                editable={true}
                 maxLength={1000}
               />
               <TouchableOpacity 
                 style={[styles.chatSendButton, { 
-                  opacity: message.trim() && session.status === 'active' ? 1 : 0.5 
+                  opacity: message.trim() ? 1 : 0.5 
                 }]}
                 onPress={handleSendMessage}
-                disabled={!message.trim() || session.status !== 'active'}
+                disabled={!message.trim()}
               >
                 <Send size={18} color={Colors.textPrimary} />
               </TouchableOpacity>

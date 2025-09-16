@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import createContextHook from '@nkzw/create-context-hook';
+import { useStorage } from '@/providers/storage-provider';
 
 export interface SupportAgent {
   id: string;
@@ -8,7 +9,7 @@ export interface SupportAgent {
   status: 'online' | 'busy' | 'offline';
   rating: number;
   specialties: string[];
-  responseTime?: string;
+  responseTime: string;
   isUrgentSpecialist?: boolean;
   currentChats: number;
   maxChats: number;
@@ -30,7 +31,7 @@ export interface ChatSession {
   agentId: string;
   agentName: string;
   type: 'general' | 'remote-assistance' | 'urgent';
-  status: 'connecting' | 'active' | 'ended' | 'queued';
+  status: 'queued' | 'connecting' | 'active' | 'ended';
   messages: ChatMessage[];
   startTime: Date;
   endTime?: Date;
@@ -41,25 +42,51 @@ export interface ChatSession {
 
 export interface QueueItem {
   id: string;
-  userId: string;
+  sessionId: string;
   type: 'general' | 'remote-assistance' | 'urgent';
   priority: number;
   timestamp: Date;
   initialMessage?: string;
-  estimatedWaitTime: number;
 }
 
-export interface SupportStats {
-  totalAgents: number;
-  onlineAgents: number;
-  busyAgents: number;
-  queueLength: number;
-  averageWaitTime: number;
-  averageResponseTime: number;
-  resolutionRate: number;
+interface SupportContextType {
+  agents: SupportAgent[];
+  activeSessions: ChatSession[];
+  queue: QueueItem[];
+  currentSession: ChatSession | null;
+  isConnecting: boolean;
+  
+  // Agent functions
+  findBestAgent: (type: 'general' | 'remote-assistance' | 'urgent') => SupportAgent | null;
+  updateAgentStatus: (agentId: string, status: 'online' | 'busy' | 'offline') => void;
+  
+  // Chat functions
+  createChatSession: (type: 'general' | 'remote-assistance' | 'urgent', initialMessage?: string) => Promise<ChatSession>;
+  connectToAgent: (sessionId: string) => Promise<boolean>;
+  sendMessage: (sessionId: string, message: string) => Promise<void>;
+  endChatSession: (sessionId: string) => Promise<void>;
+  
+  // Queue functions
+  addToQueue: (session: ChatSession) => Promise<void>;
+  removeFromQueue: (sessionId: string) => void;
+  getQueuePosition: (sessionId: string) => number;
+  getEstimatedWaitTime: (sessionId: string) => number;
+  
+  // Quick actions
+  findNextAvailableSupport: () => Promise<ChatSession | null>;
+  requestRemoteAssistance: () => Promise<ChatSession | null>;
+  urgentConnectionRequest: () => Promise<ChatSession | null>;
+  sendQuickMessage: (message: string) => Promise<ChatSession | null>;
 }
 
-export const [SupportProvider, useSupport] = createContextHook(() => {
+const STORAGE_KEYS = {
+  CHAT_HISTORY: 'support_chat_history',
+  AGENT_PREFERENCES: 'support_agent_preferences',
+};
+
+export const [SupportProvider, useSupport] = createContextHook<SupportContextType>(() => {
+  const storage = useStorage();
+  
   const [agents, setAgents] = useState<SupportAgent[]>([
     {
       id: '1',
@@ -70,7 +97,7 @@ export const [SupportProvider, useSupport] = createContextHook(() => {
       specialties: ['Network Security', 'Server Management', 'Email Systems'],
       responseTime: '< 2 min',
       isUrgentSpecialist: true,
-      currentChats: 1,
+      currentChats: 0,
       maxChats: 3,
       lastActivity: new Date()
     },
@@ -83,207 +110,257 @@ export const [SupportProvider, useSupport] = createContextHook(() => {
       specialties: ['Threat Analysis', 'Firewall Configuration', 'Security Audits'],
       responseTime: '< 3 min',
       isUrgentSpecialist: true,
-      currentChats: 0,
-      maxChats: 4,
-      lastActivity: new Date()
-    },
-    {
-      id: '3',
-      name: 'Sarah Johnson',
-      role: 'Remote Access Specialist',
-      status: 'online',
-      rating: 4.9,
-      specialties: ['TeamViewer', 'Remote Desktop', 'Screen Sharing'],
-      responseTime: '< 1 min',
-      currentChats: 2,
+      currentChats: 1,
       maxChats: 2,
       lastActivity: new Date()
     },
     {
-      id: '4',
+      id: '3',
       name: 'Mike Davis',
       role: 'IT Support Technician',
       status: 'busy',
       rating: 4.7,
       specialties: ['Hardware Troubleshooting', 'Software Installation', 'User Support'],
       responseTime: '< 5 min',
-      currentChats: 3,
-      maxChats: 3,
+      currentChats: 2,
+      maxChats: 2,
+      lastActivity: new Date()
+    },
+    {
+      id: '4',
+      name: 'Sarah Johnson',
+      role: 'Remote Access Specialist',
+      status: 'online',
+      rating: 4.9,
+      specialties: ['TeamViewer', 'Remote Desktop', 'Screen Sharing'],
+      responseTime: '< 1 min',
+      currentChats: 0,
+      maxChats: 4,
       lastActivity: new Date()
     },
     {
       id: '5',
       name: 'Alex Chen',
-      role: 'Network Administrator',
+      role: 'Technical Support Lead',
       status: 'offline',
       rating: 4.6,
-      specialties: ['Network Configuration', 'VPN Setup', 'Router Management'],
-      responseTime: '< 10 min',
+      specialties: ['System Administration', 'Database Management', 'Cloud Services'],
+      responseTime: '< 4 min',
       currentChats: 0,
-      maxChats: 2,
+      maxChats: 3,
       lastActivity: new Date(Date.now() - 30 * 60 * 1000) // 30 minutes ago
     }
   ]);
-
-  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
-  const [supportQueue, setSupportQueue] = useState<QueueItem[]>([]);
+  
+  const [activeSessions, setActiveSessions] = useState<ChatSession[]>([]);
+  const [queue, setQueue] = useState<QueueItem[]>([]);
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [chatHistory, setChatHistory] = useState<ChatSession[]>([]);
 
-  const loadChatHistory = useCallback(async () => {
-    try {
-      console.log('Loading chat history');
-      setChatHistory([]);
-    } catch (error) {
-      console.error('Failed to load chat history:', error);
-    }
-  }, []);
-
-  const saveChatHistory = useCallback(async (sessions: ChatSession[]) => {
-    if (!sessions || sessions.length === 0) return;
-    try {
-      console.log('Saving chat history:', sessions.length, 'sessions');
-    } catch (error) {
-      console.error('Failed to save chat history:', error);
-    }
-  }, []);
-
-  const updateAgentStatuses = useCallback(() => {
-    setAgents(prevAgents => 
-      prevAgents.map(agent => {
-        const timeSinceLastActivity = Date.now() - agent.lastActivity.getTime();
-        const isInactive = timeSinceLastActivity > 10 * 60 * 1000;
-        
-        let newStatus = agent.status;
-        if (isInactive && agent.status === 'online') {
-          newStatus = 'offline';
-        } else if (agent.currentChats >= agent.maxChats && agent.status === 'online') {
-          newStatus = 'busy';
-        } else if (agent.currentChats < agent.maxChats && agent.status === 'busy') {
-          newStatus = 'online';
+  // Simulate agent status changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setAgents(prev => prev.map(agent => {
+        // Randomly change agent status occasionally
+        if (Math.random() < 0.1) {
+          const statuses: ('online' | 'busy' | 'offline')[] = ['online', 'busy', 'offline'];
+          const currentIndex = statuses.indexOf(agent.status);
+          const newStatus = statuses[(currentIndex + 1) % statuses.length];
+          
+          return {
+            ...agent,
+            status: newStatus,
+            currentChats: newStatus === 'offline' ? 0 : agent.currentChats,
+            lastActivity: new Date()
+          };
         }
-        
-        return {
-          ...agent,
-          status: newStatus
-        };
-      })
-    );
+        return agent;
+      }));
+    }, 30000); // Check every 30 seconds
+
+    return () => clearInterval(interval);
   }, []);
 
-  const getAvailableAgents = useCallback((type?: 'general' | 'remote-assistance' | 'urgent') => {
-    if (type && !['general', 'remote-assistance', 'urgent'].includes(type)) {
-      console.warn('Invalid support type:', type);
-      return [];
-    }
-
+  const findBestAgent = useCallback((type: 'general' | 'remote-assistance' | 'urgent'): SupportAgent | null => {
     let availableAgents = agents.filter(agent => 
       agent.status === 'online' && agent.currentChats < agent.maxChats
     );
     
     if (type === 'urgent') {
-      availableAgents = availableAgents.filter(agent => agent.isUrgentSpecialist);
+      const urgentAgents = availableAgents.filter(agent => agent.isUrgentSpecialist);
+      if (urgentAgents.length > 0) {
+        availableAgents = urgentAgents;
+      }
     } else if (type === 'remote-assistance') {
-      availableAgents = availableAgents.filter(agent => 
+      const remoteAgents = availableAgents.filter(agent => 
         agent.specialties.some(specialty => 
           specialty.toLowerCase().includes('remote') || 
-          specialty.toLowerCase().includes('teamviewer')
+          specialty.toLowerCase().includes('teamviewer') ||
+          specialty.toLowerCase().includes('screen sharing')
         )
       );
+      if (remoteAgents.length > 0) {
+        availableAgents = remoteAgents;
+      }
     }
     
-    return availableAgents.sort((a, b) => {
-      const availabilityDiff = a.currentChats - b.currentChats;
-      if (availabilityDiff !== 0) return availabilityDiff;
-      return b.rating - a.rating;
-    });
-  }, [agents]);
-
-  const findBestAgent = useCallback((type: 'general' | 'remote-assistance' | 'urgent'): SupportAgent | null => {
-    if (!type || !['general', 'remote-assistance', 'urgent'].includes(type)) {
-      console.warn('Invalid support type:', type);
+    if (availableAgents.length === 0) {
       return null;
     }
-    const availableAgents = getAvailableAgents(type);
-    return availableAgents[0] || null;
-  }, [getAvailableAgents]);
+    
+    // Sort by rating and current workload
+    return availableAgents.sort((a, b) => {
+      const aScore = a.rating - (a.currentChats / a.maxChats);
+      const bScore = b.rating - (b.currentChats / b.maxChats);
+      return bScore - aScore;
+    })[0];
+  }, [agents]);
 
-  const calculateWaitTime = useCallback((type: 'general' | 'remote-assistance' | 'urgent'): number => {
-    if (!type || !['general', 'remote-assistance', 'urgent'].includes(type)) {
-      console.warn('Invalid support type:', type);
-      return 0;
-    }
-    const queueCount = supportQueue.filter(item => item.type === type).length;
-    const availableAgents = getAvailableAgents(type).length;
-    
-    if (availableAgents > 0) return 0;
-    
-    const baseWaitTime = type === 'urgent' ? 2 : type === 'remote-assistance' ? 5 : 8;
-    return Math.max(baseWaitTime, queueCount * 3);
-  }, [supportQueue, getAvailableAgents]);
-
-  const addToQueue = useCallback((type: 'general' | 'remote-assistance' | 'urgent', initialMessage?: string): QueueItem => {
-    if (!type || !['general', 'remote-assistance', 'urgent'].includes(type)) {
-      throw new Error('Invalid support type');
-    }
-    if (initialMessage && initialMessage.length > 500) {
-      initialMessage = initialMessage.substring(0, 500);
-    }
-
-    const priority = type === 'urgent' ? 1 : type === 'remote-assistance' ? 2 : 3;
-    const estimatedWaitTime = calculateWaitTime(type);
-    
-    const queueItem: QueueItem = {
-      id: `queue_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      userId: 'current_user',
-      type,
-      priority,
-      timestamp: new Date(),
-      initialMessage,
-      estimatedWaitTime
-    };
-    
-    setSupportQueue(prev => {
-      const newQueue = [...prev, queueItem].sort((a, b) => a.priority - b.priority);
-      return newQueue;
-    });
-    
-    return queueItem;
-  }, [calculateWaitTime]);
-
-  const removeFromQueue = useCallback((queueItemId: string) => {
-    if (!queueItemId || queueItemId.trim().length === 0) {
-      console.warn('Invalid queue item ID');
-      return;
-    }
-    setSupportQueue(prev => prev.filter(item => item.id !== queueItemId.trim()));
+  const updateAgentStatus = useCallback((agentId: string, status: 'online' | 'busy' | 'offline') => {
+    setAgents(prev => prev.map(agent => 
+      agent.id === agentId 
+        ? { ...agent, status, lastActivity: new Date() }
+        : agent
+    ));
   }, []);
 
-  const createChatSession = useCallback((
-    agent: SupportAgent, 
-    type: 'general' | 'remote-assistance' | 'urgent',
-    initialMessage?: string
-  ): ChatSession => {
-    if (!agent || !agent.id || !agent.name) {
-      throw new Error('Invalid agent data');
-    }
-    if (!type || !['general', 'remote-assistance', 'urgent'].includes(type)) {
-      throw new Error('Invalid support type');
-    }
-    if (initialMessage && initialMessage.length > 500) {
-      initialMessage = initialMessage.substring(0, 500);
+  const removeFromQueue = useCallback((sessionId: string) => {
+    setQueue(prev => prev.filter(item => item.sessionId !== sessionId));
+  }, []);
+
+  const getQueuePosition = useCallback((sessionId: string): number => {
+    const sortedQueue = [...queue].sort((a, b) => {
+      if (a.priority !== b.priority) {
+        return b.priority - a.priority;
+      }
+      return a.timestamp.getTime() - b.timestamp.getTime();
+    });
+    
+    return sortedQueue.findIndex(item => item.sessionId === sessionId);
+  }, [queue]);
+
+  const getEstimatedWaitTime = useCallback((sessionId: string): number => {
+    const position = getQueuePosition(sessionId);
+    if (position === -1) return 0;
+    
+    // Estimate 3-5 minutes per person ahead in queue
+    const baseWaitTime = 4; // minutes
+    return (position + 1) * baseWaitTime;
+  }, [getQueuePosition]);
+
+  const addToQueue = useCallback(async (session: ChatSession): Promise<void> => {
+    const queueItem: QueueItem = {
+      id: `queue_${Date.now()}`,
+      sessionId: session.id,
+      type: session.type,
+      priority: session.priority,
+      timestamp: new Date(),
+    };
+
+    setQueue(prev => [...prev, queueItem]);
+    
+    // Update session with queue info
+    const position = getQueuePosition(session.id) + 1;
+    const waitTime = getEstimatedWaitTime(session.id);
+    
+    setActiveSessions(prev => prev.map(s => 
+      s.id === session.id 
+        ? { ...s, queuePosition: position, estimatedWaitTime: waitTime }
+        : s
+    ));
+  }, [getQueuePosition, getEstimatedWaitTime]);
+
+  const connectToAgent = useCallback(async (sessionId: string): Promise<boolean> => {
+    setIsConnecting(true);
+    
+    const session = activeSessions.find(s => s.id === sessionId);
+    if (!session) {
+      setIsConnecting(false);
+      return false;
     }
 
+    const agent = findBestAgent(session.type);
+    if (!agent || agent.currentChats >= agent.maxChats) {
+      setIsConnecting(false);
+      return false;
+    }
+
+    // Simulate connection delay
+    await new Promise<void>(resolve => setTimeout(() => resolve(), 2000));
+
+    // Update agent workload
+    setAgents(prev => prev.map(a => 
+      a.id === agent.id 
+        ? { ...a, currentChats: a.currentChats + 1, status: a.currentChats + 1 >= a.maxChats ? 'busy' : 'online' }
+        : a
+    ));
+
+    // Update session
+    const updatedSession: ChatSession = {
+      ...session,
+      agentId: agent.id,
+      agentName: agent.name,
+      status: 'active',
+      messages: [
+        ...session.messages,
+        {
+          id: `msg_${Date.now()}`,
+          text: `Hello! I'm ${agent.name}, and I'll be assisting you today. How can I help you?`,
+          sender: 'agent',
+          timestamp: new Date(),
+          agentName: agent.name,
+          type: 'system'
+        }
+      ]
+    };
+
+    setActiveSessions(prev => prev.map(s => s.id === sessionId ? updatedSession : s));
+    setCurrentSession(updatedSession);
+    
+    // Remove from queue if it was queued
+    removeFromQueue(sessionId);
+    
+    // Handle special session types
+    if (session.type === 'remote-assistance') {
+      setTimeout(() => {
+        const remoteMessage: ChatMessage = {
+          id: `msg_${Date.now() + 1}`,
+          text: "I've initiated a TeamViewer session request. You should receive a notification shortly. Please accept it so I can assist you remotely.",
+          sender: 'agent',
+          timestamp: new Date(),
+          agentName: agent.name,
+          type: 'system'
+        };
+        
+        setActiveSessions(prev => prev.map(s => 
+          s.id === sessionId 
+            ? { ...s, messages: [...s.messages, remoteMessage] }
+            : s
+        ));
+        
+        if (currentSession?.id === sessionId) {
+          setCurrentSession(prev => prev ? {
+            ...prev,
+            messages: [...prev.messages, remoteMessage]
+          } : null);
+        }
+      }, 3000);
+    }
+    
+    setIsConnecting(false);
+    return true;
+  }, [activeSessions, findBestAgent, currentSession, removeFromQueue]);
+
+  const createChatSession = useCallback(async (type: 'general' | 'remote-assistance' | 'urgent', initialMessage?: string): Promise<ChatSession> => {
     const sessionId = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const priority = type === 'urgent' ? 1 : type === 'remote-assistance' ? 2 : 3;
+    const priority = type === 'urgent' ? 3 : type === 'remote-assistance' ? 2 : 1;
     
     const session: ChatSession = {
       id: sessionId,
-      agentId: agent.id,
-      agentName: agent.name,
+      agentId: '',
+      agentName: '',
       type,
-      status: 'connecting',
+      status: 'queued',
       messages: initialMessage ? [{
         id: `msg_${Date.now()}`,
         text: initialMessage,
@@ -293,325 +370,242 @@ export const [SupportProvider, useSupport] = createContextHook(() => {
       startTime: new Date(),
       priority
     };
+
+    setActiveSessions(prev => [...prev, session]);
+    setCurrentSession(session);
+    
+    // Try to find an available agent immediately
+    const agent = findBestAgent(type);
+    if (agent && agent.currentChats < agent.maxChats) {
+      // Connect immediately
+      setTimeout(() => connectToAgent(sessionId), 100);
+    } else {
+      // Add to queue
+      await addToQueue(session);
+    }
     
     return session;
-  }, []);
+  }, [findBestAgent, addToQueue, connectToAgent]);
 
-  const addSystemMessage = useCallback((sessionId: string, text: string) => {
-    if (!sessionId || sessionId.trim().length === 0) return;
-    if (!text || text.trim().length === 0) return;
+  // Process queue
+  useEffect(() => {
+    const processQueue = () => {
+      if (queue.length === 0) return;
 
-    const systemMessage: ChatMessage = {
-      id: `msg_${Date.now()}`,
-      text,
-      sender: 'agent',
-      timestamp: new Date(),
-      type: 'system'
+      const sortedQueue = [...queue].sort((a, b) => {
+        // Sort by priority first, then by timestamp
+        if (a.priority !== b.priority) {
+          return b.priority - a.priority; // Higher priority first
+        }
+        return a.timestamp.getTime() - b.timestamp.getTime(); // Earlier timestamp first
+      });
+
+      for (const queueItem of sortedQueue) {
+        const session = activeSessions.find(s => s.id === queueItem.sessionId);
+        if (!session || session.status !== 'queued') continue;
+
+        const agent = findBestAgent(queueItem.type);
+        if (agent && agent.currentChats < agent.maxChats) {
+          // Assign agent to session
+          connectToAgent(session.id);
+          break; // Process one at a time
+        }
+      }
     };
-    
+
+    const interval = setInterval(processQueue, 5000); // Check every 5 seconds
+    return () => clearInterval(interval);
+  }, [queue, activeSessions, findBestAgent, connectToAgent]);
+
+  const sendMessage = useCallback(async (sessionId: string, message: string): Promise<void> => {
+    const session = activeSessions.find(s => s.id === sessionId);
+    if (!session || session.status !== 'active') return;
+
+    const newMessage: ChatMessage = {
+      id: `msg_${Date.now()}`,
+      text: message.trim(),
+      sender: 'user',
+      timestamp: new Date()
+    };
+
+    setActiveSessions(prev => prev.map(s => 
+      s.id === sessionId 
+        ? { ...s, messages: [...s.messages, newMessage] }
+        : s
+    ));
+
     if (currentSession?.id === sessionId) {
       setCurrentSession(prev => prev ? {
         ...prev,
-        messages: [...prev.messages, systemMessage]
+        messages: [...prev.messages, newMessage]
       } : null);
     }
-    
-    setChatSessions(prev => prev.map(session => 
-      session.id === sessionId 
-        ? { ...session, messages: [...session.messages, systemMessage] }
-        : session
-    ));
-  }, [currentSession]);
 
-  const connectToAgent = useCallback(async (session: ChatSession): Promise<boolean> => {
-    setIsConnecting(true);
-    
-    try {
-      setAgents(prev => prev.map(agent => 
-        agent.id === session.agentId 
-          ? { ...agent, currentChats: agent.currentChats + 1, lastActivity: new Date() }
-          : agent
-      ));
+    // Simulate agent response
+    setTimeout(() => {
+      const responses = [
+        "I understand your concern. Let me help you with that right away.",
+        "Thank you for providing that information. I'm looking into this now.",
+        "I see what you mean. Let me check our system for the best solution.",
+        "That's a great question. I'll walk you through the solution step by step.",
+        "I've reviewed your request and I have a solution for you."
+      ];
       
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const welcomeMessage: ChatMessage = {
-        id: `msg_${Date.now()}`,
-        text: `Hello! I'm ${session.agentName}, and I'll be assisting you today. How can I help you?`,
+      const agentResponse: ChatMessage = {
+        id: `msg_${Date.now() + 1}`,
+        text: responses[Math.floor(Math.random() * responses.length)],
         sender: 'agent',
         timestamp: new Date(),
-        agentName: session.agentName,
-        type: 'system'
+        agentName: session.agentName
       };
       
-      const updatedSession: ChatSession = {
-        ...session,
-        status: 'active',
-        messages: [...session.messages, welcomeMessage]
-      };
+      setActiveSessions(prev => prev.map(s => 
+        s.id === sessionId 
+          ? { ...s, messages: [...s.messages, agentResponse] }
+          : s
+      ));
       
-      setCurrentSession(updatedSession);
-      setChatSessions(prev => [...prev, updatedSession]);
-      
-      if (session.type === 'remote-assistance') {
-        setTimeout(() => {
-          addSystemMessage(
-            updatedSession.id,
-            "I've initiated a TeamViewer session request. You should receive a notification shortly. Please accept it so I can assist you remotely."
-          );
-        }, 3000);
+      if (currentSession?.id === sessionId) {
+        setCurrentSession(prev => prev ? {
+          ...prev,
+          messages: [...prev.messages, agentResponse]
+        } : null);
       }
-      
-      setIsConnecting(false);
-      return true;
-    } catch (error) {
-      console.error('Failed to connect to agent:', error);
-      setIsConnecting(false);
-      return false;
-    }
-  }, [addSystemMessage]);
+    }, 1500 + Math.random() * 2000); // Random delay between 1.5-3.5 seconds
+  }, [activeSessions, currentSession]);
 
-  const processQueue = useCallback(() => {
-    if (supportQueue.length === 0) return;
-    
-    const availableAgents = getAvailableAgents();
-    if (availableAgents.length === 0) return;
-    
-    const sortedQueue = [...supportQueue].sort((a, b) => {
-      if (a.priority !== b.priority) return a.priority - b.priority;
-      return a.timestamp.getTime() - b.timestamp.getTime();
-    });
-    
-    for (const queueItem of sortedQueue) {
-      const suitableAgent = findBestAgent(queueItem.type);
-      if (suitableAgent) {
-        const session = createChatSession(suitableAgent, queueItem.type, queueItem.initialMessage);
-        connectToAgent(session);
-        removeFromQueue(queueItem.id);
-        break;
-      }
-    }
-  }, [supportQueue, getAvailableAgents, findBestAgent, createChatSession, connectToAgent, removeFromQueue]);
-
-  const startChat = useCallback(async (
-    type: 'general' | 'remote-assistance' | 'urgent',
-    initialMessage?: string
-  ): Promise<{ success: boolean; session?: ChatSession; queueItem?: QueueItem }> => {
-    if (!type || !['general', 'remote-assistance', 'urgent'].includes(type)) {
-      throw new Error('Invalid support type');
-    }
-    if (initialMessage && initialMessage.length > 500) {
-      initialMessage = initialMessage.substring(0, 500);
-    }
-
-    const agent = findBestAgent(type);
-    
-    if (!agent) {
-      const queueItem = addToQueue(type, initialMessage);
-      return { success: false, queueItem };
-    }
-    
-    const session = createChatSession(agent, type, initialMessage);
-    const connected = await connectToAgent(session);
-    
-    if (connected) {
-      return { success: true, session };
-    } else {
-      const queueItem = addToQueue(type, initialMessage);
-      return { success: false, queueItem };
-    }
-  }, [findBestAgent, addToQueue, createChatSession, connectToAgent]);
-
-  const simulateAgentResponse = useCallback((sessionId: string, userMessage: string) => {
-    if (!sessionId || sessionId.trim().length === 0) return;
-    if (!userMessage || userMessage.trim().length === 0) return;
-
-    const responses = [
-      "I understand your concern. Let me help you with that right away.",
-      "Thank you for providing that information. I'm looking into this now.",
-      "I see the issue. Let me walk you through the solution step by step.",
-      "That's a great question. Here's what I recommend...",
-      "I've reviewed your request and I have a solution for you.",
-      "Let me check our system for the best approach to resolve this."
-    ];
-    
-    const response = responses[Math.floor(Math.random() * responses.length)];
-    
-    const agentMessage: ChatMessage = {
-      id: `msg_${Date.now() + 1}`,
-      text: response,
-      sender: 'agent',
-      timestamp: new Date(),
-      type: 'text'
-    };
-    
-    if (currentSession?.id === sessionId) {
-      setCurrentSession(prev => prev ? {
-        ...prev,
-        messages: [...prev.messages, agentMessage]
-      } : null);
-    }
-    
-    setChatSessions(prev => prev.map(session => 
-      session.id === sessionId 
-        ? { ...session, messages: [...session.messages, agentMessage] }
-        : session
-    ));
-  }, [currentSession]);
-
-  const sendMessage = useCallback((sessionId: string, text: string) => {
-    if (!sessionId || sessionId.trim().length === 0) {
-      console.warn('Invalid session ID');
-      return;
-    }
-    if (!text || text.trim().length === 0) {
-      console.warn('Empty message text');
-      return;
-    }
-    if (text.length > 1000) {
-      text = text.substring(0, 1000);
-    }
-
-    const message: ChatMessage = {
-      id: `msg_${Date.now()}`,
-      text: text.trim(),
-      sender: 'user',
-      timestamp: new Date(),
-      type: 'text'
-    };
-    
-    if (currentSession?.id === sessionId) {
-      setCurrentSession(prev => prev ? {
-        ...prev,
-        messages: [...prev.messages, message]
-      } : null);
-    }
-    
-    setChatSessions(prev => prev.map(session => 
-      session.id === sessionId 
-        ? { ...session, messages: [...session.messages, message] }
-        : session
-    ));
-    
-    setTimeout(() => {
-      simulateAgentResponse(sessionId, text);
-    }, 1000 + Math.random() * 2000);
-  }, [currentSession, simulateAgentResponse]);
-
-  const endChat = useCallback((sessionId: string) => {
-    if (!sessionId || sessionId.trim().length === 0) {
-      console.warn('Invalid session ID');
-      return;
-    }
-
-    const session = chatSessions.find(s => s.id === sessionId);
+  const endChatSession = useCallback(async (sessionId: string): Promise<void> => {
+    const session = activeSessions.find(s => s.id === sessionId);
     if (!session) return;
-    
-    setAgents(prev => prev.map(agent => 
-      agent.id === session.agentId 
-        ? { ...agent, currentChats: Math.max(0, agent.currentChats - 1) }
-        : agent
-    ));
-    
-    const endedSession: ChatSession = {
+
+    // Update agent workload
+    if (session.agentId) {
+      setAgents(prev => prev.map(agent => 
+        agent.id === session.agentId 
+          ? { 
+              ...agent, 
+              currentChats: Math.max(0, agent.currentChats - 1),
+              status: agent.currentChats - 1 < agent.maxChats ? 'online' : agent.status
+            }
+          : agent
+      ));
+    }
+
+    // Update session
+    const endedSession = {
       ...session,
-      status: 'ended',
+      status: 'ended' as const,
       endTime: new Date()
     };
-    
-    setChatSessions(prev => prev.map(s => 
-      s.id === sessionId ? endedSession : s
-    ));
-    
-    const updatedHistory = [...chatHistory, endedSession];
-    setChatHistory(updatedHistory);
-    saveChatHistory(updatedHistory);
+
+    setActiveSessions(prev => prev.map(s => s.id === sessionId ? endedSession : s));
     
     if (currentSession?.id === sessionId) {
       setCurrentSession(null);
     }
-  }, [chatSessions, chatHistory, saveChatHistory, currentSession]);
 
-  const getSupportStats = useCallback((): SupportStats => {
-    const totalAgents = agents.length;
-    const onlineAgents = agents.filter(a => a.status === 'online').length;
-    const busyAgents = agents.filter(a => a.status === 'busy').length;
-    const queueLength = supportQueue.length;
-    
-    return {
-      totalAgents,
-      onlineAgents,
-      busyAgents,
-      queueLength,
-      averageWaitTime: calculateWaitTime('general'),
-      averageResponseTime: 4.2,
-      resolutionRate: 98.5
-    };
-  }, [agents, supportQueue, calculateWaitTime]);
-
-  const getQueuePosition = useCallback((queueItemId: string): number => {
-    if (!queueItemId || queueItemId.trim().length === 0) {
-      console.warn('Invalid queue item ID');
-      return 0;
+    // Save to history
+    try {
+      const history = await storage.getItem(STORAGE_KEYS.CHAT_HISTORY);
+      const chatHistory = history ? JSON.parse(history) : [];
+      chatHistory.push(endedSession);
+      await storage.setItem(STORAGE_KEYS.CHAT_HISTORY, JSON.stringify(chatHistory));
+    } catch (error) {
+      console.error('Failed to save chat history:', error);
     }
 
-    const sortedQueue = [...supportQueue].sort((a, b) => {
-      if (a.priority !== b.priority) return a.priority - b.priority;
-      return a.timestamp.getTime() - b.timestamp.getTime();
-    });
+    // Remove from active sessions after a delay
+    setTimeout(() => {
+      setActiveSessions(prev => prev.filter(s => s.id !== sessionId));
+    }, 5000);
+  }, [activeSessions, currentSession, storage]);
+
+  // Quick action functions
+  const findNextAvailableSupport = useCallback(async (): Promise<ChatSession | null> => {
+    const agent = findBestAgent('general');
+    if (!agent) {
+      console.log('No agents available - adding to queue');
+    }
     
-    return sortedQueue.findIndex(item => item.id === queueItemId.trim()) + 1;
-  }, [supportQueue]);
+    return await createChatSession('general');
+  }, [findBestAgent, createChatSession]);
 
-  useEffect(() => {
-    loadChatHistory();
-  }, [loadChatHistory]);
+  const requestRemoteAssistance = useCallback(async (): Promise<ChatSession | null> => {
+    const agent = findBestAgent('remote-assistance');
+    if (!agent) {
+      console.log('No remote specialists available - adding to priority queue');
+    }
+    
+    return await createChatSession('remote-assistance');
+  }, [findBestAgent, createChatSession]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      updateAgentStatuses();
-      processQueue();
-    }, 30000);
+  const urgentConnectionRequest = useCallback(async (): Promise<ChatSession | null> => {
+    const agent = findBestAgent('urgent');
+    if (!agent) {
+      console.log('No urgent specialists available - adding to high-priority queue');
+    }
+    
+    return await createChatSession('urgent');
+  }, [findBestAgent, createChatSession]);
 
-    return () => clearInterval(interval);
-  }, [updateAgentStatuses, processQueue]);
+  const sendQuickMessage = useCallback(async (message: string): Promise<ChatSession | null> => {
+    if (!message?.trim() || message.length > 1000) {
+      console.error('Invalid message');
+      return null;
+    }
+    
+    const sanitizedMessage = message.trim();
+    const agent = findBestAgent('general');
+    if (!agent) {
+      console.log('All agents busy - message will be sent when available');
+    }
+    
+    return await createChatSession('general', sanitizedMessage);
+  }, [findBestAgent, createChatSession]);
 
   return useMemo(() => ({
     agents,
-    chatSessions,
+    activeSessions,
+    queue,
     currentSession,
-    supportQueue,
     isConnecting,
-    chatHistory,
-    startChat,
+    
+    findBestAgent,
+    updateAgentStatus,
+    
+    createChatSession,
+    connectToAgent,
     sendMessage,
-    endChat,
+    endChatSession,
+    
     addToQueue,
     removeFromQueue,
-    setCurrentSession,
-    findBestAgent,
-    getAvailableAgents,
-    getSupportStats,
     getQueuePosition,
-    calculateWaitTime,
-    processQueue
+    getEstimatedWaitTime,
+    
+    findNextAvailableSupport,
+    requestRemoteAssistance,
+    urgentConnectionRequest,
+    sendQuickMessage,
   }), [
     agents,
-    chatSessions,
+    activeSessions,
+    queue,
     currentSession,
-    supportQueue,
     isConnecting,
-    chatHistory,
-    startChat,
+    findBestAgent,
+    updateAgentStatus,
+    createChatSession,
+    connectToAgent,
     sendMessage,
-    endChat,
+    endChatSession,
     addToQueue,
     removeFromQueue,
-    findBestAgent,
-    getAvailableAgents,
-    getSupportStats,
     getQueuePosition,
-    calculateWaitTime,
-    processQueue
+    getEstimatedWaitTime,
+    findNextAvailableSupport,
+    requestRemoteAssistance,
+    urgentConnectionRequest,
+    sendQuickMessage,
   ]);
 });

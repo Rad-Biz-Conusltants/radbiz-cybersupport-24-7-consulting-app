@@ -8,6 +8,8 @@ import { AuthProvider } from "@/providers/auth-provider";
 import { SubscriptionProvider } from "@/providers/subscription-provider";
 import { TicketsProvider } from "@/providers/tickets-provider";
 import { UsersProvider } from "@/providers/users-provider";
+import { StorageProvider } from "@/providers/storage-provider";
+import { SupportProvider } from "@/providers/support-provider";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -48,15 +50,19 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView style={styles.gestureHandler}>
-        <AuthProvider>
-          <SubscriptionProvider>
-            <TicketsProvider>
-              <UsersProvider>
-                <RootLayoutNav />
-              </UsersProvider>
-            </TicketsProvider>
-          </SubscriptionProvider>
-        </AuthProvider>
+        <StorageProvider>
+          <AuthProvider>
+            <SubscriptionProvider>
+              <TicketsProvider>
+                <UsersProvider>
+                  <SupportProvider>
+                    <RootLayoutNav />
+                  </SupportProvider>
+                </UsersProvider>
+              </TicketsProvider>
+            </SubscriptionProvider>
+          </AuthProvider>
+        </StorageProvider>
       </GestureHandlerRootView>
     </QueryClientProvider>
   );

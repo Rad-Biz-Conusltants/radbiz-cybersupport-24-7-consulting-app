@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Modal, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Send, X, Phone, Video, Paperclip, Clock, Users } from 'lucide-react-native';
+import { Send, X, Phone, Video, Paperclip, Clock, Users, Image, FileText } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
 import Colors from '@/constants/colors';
 import { useSupport, ChatMessage, ChatSession } from '@/providers/support-provider';
 
@@ -16,6 +18,7 @@ export default function ChatScreen({ visible, onClose, session }: ChatScreenProp
   const insets = useSafeAreaInsets();
   const { sendMessage, endChatSession, isConnecting, queue } = useSupport();
   const [message, setMessage] = useState('');
+  const [showAttachmentOptions, setShowAttachmentOptions] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {
@@ -61,6 +64,151 @@ export default function ChatScreen({ visible, onClose, session }: ChatScreenProp
           }
         }
       ]
+    );
+  };
+
+  const handleVoiceCall = () => {
+    if (!session || session.status !== 'active') {
+      Alert.alert('Call Unavailable', 'Voice calls are only available during active chat sessions.');
+      return;
+    }
+    
+    Alert.alert(
+      'Voice Call Request',
+      `Request a voice call with ${session.agentName}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Request Call', 
+          onPress: async () => {
+            try {
+              await sendMessage(session.id, '📞 Voice call requested');
+              Alert.alert('Call Requested', 'Your agent will call you shortly.');
+            } catch (error) {
+              console.error('Failed to request call:', error);
+              Alert.alert('Error', 'Failed to request call. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleVideoCall = () => {
+    if (!session || session.status !== 'active') {
+      Alert.alert('Video Call Unavailable', 'Video calls are only available during active chat sessions.');
+      return;
+    }
+    
+    Alert.alert(
+      'Video Call Request',
+      `Request a video call with ${session.agentName}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Request Video Call', 
+          onPress: async () => {
+            try {
+              await sendMessage(session.id, '📹 Video call requested');
+              Alert.alert('Video Call Requested', 'Your agent will start a video call shortly.');
+            } catch (error) {
+              console.error('Failed to request video call:', error);
+              Alert.alert('Error', 'Failed to request video call. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleAttachmentPress = () => {
+    setShowAttachmentOptions(true);
+  };
+
+  const handleImagePicker = async () => {
+    setShowAttachmentOptions(false);
+    
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (!permissionResult.granted) {
+        Alert.alert('Permission Required', 'Please allow access to your photo library to share images.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        const fileName = asset.fileName || 'image.jpg';
+        await sendMessage(session!.id, `📷 Image shared: ${fileName}`);
+        Alert.alert('Image Shared', 'Your image has been sent to the agent.');
+      }
+    } catch (error) {
+      console.error('Failed to pick image:', error);
+      Alert.alert('Error', 'Failed to share image. Please try again.');
+    }
+  };
+
+  const handleDocumentPicker = async () => {
+    setShowAttachmentOptions(false);
+    
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        await sendMessage(session!.id, `📎 File shared: ${asset.name}`);
+        Alert.alert('File Shared', 'Your file has been sent to the agent.');
+      }
+    } catch (error) {
+      console.error('Failed to pick document:', error);
+      Alert.alert('Error', 'Failed to share file. Please try again.');
+    }
+  };
+
+  const renderAttachmentOptions = () => {
+    if (!showAttachmentOptions) return null;
+    
+    return (
+      <Modal
+        visible={showAttachmentOptions}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAttachmentOptions(false)}
+      >
+        <TouchableOpacity 
+          style={styles.attachmentModalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowAttachmentOptions(false)}
+        >
+          <View style={styles.attachmentOptionsContainer}>
+            <TouchableOpacity 
+              style={styles.attachmentOption}
+              onPress={handleImagePicker}
+            >
+              <Image size={24} color={Colors.primary} />
+              <Text style={styles.attachmentOptionText}>Photo</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.attachmentOption}
+              onPress={handleDocumentPicker}
+            >
+              <FileText size={24} color={Colors.primary} />
+              <Text style={styles.attachmentOptionText}>Document</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     );
   };
 
@@ -177,10 +325,22 @@ export default function ChatScreen({ visible, onClose, session }: ChatScreenProp
             </View>
             
             <View style={styles.chatHeaderActions}>
-              <TouchableOpacity style={styles.chatActionButton}>
+              <TouchableOpacity 
+                style={[styles.chatActionButton, {
+                  opacity: session.status === 'active' ? 1 : 0.5
+                }]}
+                onPress={handleVoiceCall}
+                disabled={session.status !== 'active'}
+              >
                 <Phone size={18} color={Colors.textSecondary} />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.chatActionButton}>
+              <TouchableOpacity 
+                style={[styles.chatActionButton, {
+                  opacity: session.status === 'active' ? 1 : 0.5
+                }]}
+                onPress={handleVideoCall}
+                disabled={session.status !== 'active'}
+              >
                 <Video size={18} color={Colors.textSecondary} />
               </TouchableOpacity>
               <TouchableOpacity 
@@ -213,7 +373,13 @@ export default function ChatScreen({ visible, onClose, session }: ChatScreenProp
           {/* Chat Input */}
           <View style={[styles.chatInputContainer, { paddingBottom: insets.bottom + 10 }]}>
             <View style={styles.chatInputRow}>
-              <TouchableOpacity style={styles.attachButton}>
+              <TouchableOpacity 
+                style={[styles.attachButton, {
+                  opacity: session.status === 'active' ? 1 : 0.5
+                }]}
+                onPress={handleAttachmentPress}
+                disabled={session.status !== 'active'}
+              >
                 <Paperclip size={18} color={Colors.textMuted} />
               </TouchableOpacity>
               <TextInput
@@ -237,6 +403,9 @@ export default function ChatScreen({ visible, onClose, session }: ChatScreenProp
               </TouchableOpacity>
             </View>
           </View>
+          
+          {/* Attachment Options Modal */}
+          {renderAttachmentOptions()}
         </LinearGradient>
       </View>
     </Modal>
@@ -472,5 +641,31 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     borderRadius: 8,
     marginLeft: 12,
+  },
+  attachmentModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+    paddingBottom: 100,
+  },
+  attachmentOptionsContainer: {
+    backgroundColor: Colors.cardBackground,
+    marginHorizontal: 20,
+    borderRadius: 16,
+    paddingVertical: 20,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  attachmentOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  attachmentOptionText: {
+    fontSize: 16,
+    color: Colors.textPrimary,
+    marginLeft: 16,
+    fontWeight: '500',
   },
 });

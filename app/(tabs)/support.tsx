@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MessageCircle, Phone, Video, Mail, Clock, CheckCircle, User, Send, Paperclip, Star } from 'lucide-react-native';
+import { MessageCircle, Clock, CheckCircle, User, Send, Paperclip, Star, Monitor, Zap } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
-import { useAuth } from '@/providers/auth-provider';
+
 
 interface SupportAgent {
   id: string;
@@ -16,10 +16,10 @@ interface SupportAgent {
 }
 
 export default function SupportScreen() {
-  const { user } = useAuth();
+
   const insets = useSafeAreaInsets();
   const [message, setMessage] = useState('');
-  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
+  const [, setSelectedAgent] = useState<string | null>(null);
 
   const supportAgents: SupportAgent[] = [
     {
@@ -59,21 +59,50 @@ export default function SupportScreen() {
 
   const handleStartChat = (agentId: string) => {
     setSelectedAgent(agentId);
-    Alert.alert('Chat Started', 'You are now connected with a support agent.');
+    const chatType = agentId === 'next-available' ? 'next available support agent' :
+                    agentId === 'remote-assistance' ? 'support agent for remote assistance' :
+                    agentId === 'urgent-support' ? 'best available support agent for urgent assistance' :
+                    agentId === 'quick-message' ? 'live support agent' :
+                    'support agent';
+    
+    Alert.alert('Chat Connected', `You are now connected with a ${chatType}. They will assist you shortly.`);
   };
 
-  const handleVideoCall = () => {
-    Alert.alert('Video Call', 'Starting video call with support agent...');
+  const handleFindNextAvailable = () => {
+    Alert.alert('Finding Support Agent', 'Connecting you to the next available support agent...', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Start Chat', onPress: () => handleStartChat('next-available') }
+    ]);
   };
 
-  const handlePhoneCall = () => {
-    Alert.alert('Phone Call', 'Connecting you to our support hotline...');
+  const handleRemoteAssistance = () => {
+    Alert.alert('Remote Assistance Request', 'Starting chat and requesting TeamViewer remote access...', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Request Access', onPress: () => {
+        handleStartChat('remote-assistance');
+        // TODO: Integrate with TeamViewer API
+        setTimeout(() => {
+          Alert.alert('Remote Access', 'TeamViewer remote access request has been sent to the support agent.');
+        }, 1000);
+      }}
+    ]);
+  };
+
+  const handleUrgentConnection = () => {
+    Alert.alert('Urgent Connection Request', 'Connecting you to the best available support agent for urgent assistance...', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Connect Now', onPress: () => handleStartChat('urgent-support') }
+    ]);
   };
 
   const handleSendMessage = () => {
     if (message.trim()) {
-      Alert.alert('Message Sent', 'Your message has been sent to the support team.');
-      setMessage('');
+      Alert.alert('Connecting to Live Agent', 'Your message has been sent and you are being connected to a live support agent...', [
+        { text: 'OK', onPress: () => {
+          setMessage('');
+          handleStartChat('quick-message');
+        }}
+      ]);
     }
   };
 
@@ -100,29 +129,29 @@ export default function SupportScreen() {
           <View style={styles.actionsGrid}>
             <TouchableOpacity 
               style={styles.actionCard}
-              onPress={handleVideoCall}
+              onPress={handleFindNextAvailable}
             >
               <LinearGradient
                 colors={[Colors.primary, Colors.primaryDark]}
                 style={styles.actionGradient}
               >
-                <Video size={24} color={Colors.textPrimary} />
-                <Text style={styles.actionText}>Video Call</Text>
-                <Text style={styles.actionSubtext}>Screen sharing available</Text>
+                <MessageCircle size={24} color={Colors.textPrimary} />
+                <Text style={styles.actionText}>Find Next Available Support</Text>
+                <Text style={styles.actionSubtext}>Opens chat instantly</Text>
               </LinearGradient>
             </TouchableOpacity>
             
             <TouchableOpacity 
               style={styles.actionCard}
-              onPress={handlePhoneCall}
+              onPress={handleRemoteAssistance}
             >
               <LinearGradient
                 colors={[Colors.accent, Colors.accentDark]}
                 style={styles.actionGradient}
               >
-                <Phone size={24} color={Colors.textPrimary} />
-                <Text style={styles.actionText}>Phone Call</Text>
-                <Text style={styles.actionSubtext}>24/7 hotline</Text>
+                <Monitor size={24} color={Colors.textPrimary} />
+                <Text style={styles.actionText}>Request Remote Assistance</Text>
+                <Text style={styles.actionSubtext}>Chat + TeamViewer access</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -173,8 +202,8 @@ export default function SupportScreen() {
                 <View style={styles.specialties}>
                   <Text style={styles.specialtiesLabel}>Specialties:</Text>
                   <View style={styles.specialtyTags}>
-                    {agent.specialties.map((specialty, index) => (
-                      <View key={index} style={styles.specialtyTag}>
+                    {agent.specialties.map((specialty) => (
+                      <View key={specialty} style={styles.specialtyTag}>
                         <Text style={styles.specialtyText}>{specialty}</Text>
                       </View>
                     ))}
@@ -221,16 +250,16 @@ export default function SupportScreen() {
             colors={[Colors.cardBackground, '#2A2A2A']}
             style={styles.contactGradient}
           >
-            <Text style={styles.contactTitle}>Emergency Contact</Text>
+            <Text style={styles.contactTitle}>Urgent Connection Request</Text>
             <Text style={styles.contactText}>
-              For critical security incidents or system outages, contact our emergency hotline:
+              For critical security incidents or system outages, get instant connection to our best support agent:
             </Text>
-            <TouchableOpacity style={styles.emergencyButton}>
-              <Phone size={16} color={Colors.error} />
-              <Text style={styles.emergencyText}>+1 (555) 911-HELP</Text>
+            <TouchableOpacity style={styles.emergencyButton} onPress={handleUrgentConnection}>
+              <Zap size={16} color={Colors.error} />
+              <Text style={styles.emergencyText}>Connect to Best Agent</Text>
             </TouchableOpacity>
             <Text style={styles.contactNote}>
-              Available 24/7 for business customers
+              Sends message and connects instantly
             </Text>
           </LinearGradient>
         </View>

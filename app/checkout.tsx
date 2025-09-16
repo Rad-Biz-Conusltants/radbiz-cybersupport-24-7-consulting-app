@@ -155,7 +155,7 @@ export default function CheckoutScreen() {
         
         {user && (
           <View style={styles.supportTypeHeader}>
-            <View style={[styles.supportTypeIcon, { backgroundColor: supportInfo.color + '20' }]}>
+            <View style={[styles.supportTypeIcon, { backgroundColor: `${supportInfo.color}20` }]}>
               {React.createElement(supportInfo.icon, { size: 24, color: supportInfo.color })}
             </View>
             <View style={styles.supportTypeInfo}>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Shield, AlertTriangle, CheckCircle, Eye, Lock, Wifi, Server, Database, Globe, Smartphone, Monitor, Tablet, Settings, RefreshCw, Download, Trash2, FileText, Camera, Mic } from 'lucide-react-native';
+import { Shield, AlertTriangle, CheckCircle, Eye, Lock, Wifi, Server, Database, Globe, Smartphone, Monitor, Tablet, Settings, RefreshCw, Download, Trash2, FileText, Camera, Mic, Zap, MapPin, Activity, Power, RotateCcw, WifiOff, ShieldCheck, ShieldAlert, ShieldX, Network, Router, Signal } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // Platform-specific imports with web compatibility
 let Device: any = null;
@@ -62,6 +62,27 @@ interface PermissionStatus {
   storage: boolean;
 }
 
+interface VPNStatus {
+  isConnected: boolean;
+  serverLocation: string;
+  serverCountry: string;
+  connectionTime: string;
+  dataTransferred: { upload: string; download: string };
+  ipAddress: string;
+  protocol: string;
+  encryption: string;
+  latency: number;
+  isSecure: boolean;
+}
+
+interface NetworkThreat {
+  id: string;
+  type: 'malware' | 'phishing' | 'tracking' | 'ads' | 'suspicious';
+  blocked: boolean;
+  count: number;
+  lastBlocked: string;
+}
+
 export default function SecurityScreen() {
   const { user } = useAuth();
   console.log('Security screen loaded for user:', user?.email);
@@ -78,12 +99,36 @@ export default function SecurityScreen() {
     storage: false
   });
   const [securityScore, setSecurityScore] = useState<number>(85);
+  const [vpnStatus, setVpnStatus] = useState<VPNStatus>({
+    isConnected: false,
+    serverLocation: 'Not Connected',
+    serverCountry: '',
+    connectionTime: '',
+    dataTransferred: { upload: '0 MB', download: '0 MB' },
+    ipAddress: '192.168.1.1',
+    protocol: 'OpenVPN',
+    encryption: 'AES-256',
+    latency: 0,
+    isSecure: false
+  });
+  const [isConnectingVPN, setIsConnectingVPN] = useState<boolean>(false);
+  const [networkThreats, setNetworkThreats] = useState<NetworkThreat[]>([
+    { id: '1', type: 'malware', blocked: true, count: 15, lastBlocked: '2 minutes ago' },
+    { id: '2', type: 'tracking', blocked: true, count: 42, lastBlocked: '5 minutes ago' },
+    { id: '3', type: 'ads', blocked: true, count: 128, lastBlocked: '1 minute ago' },
+    { id: '4', type: 'phishing', blocked: true, count: 3, lastBlocked: '1 hour ago' }
+  ]);
+  const [realTimeProtection, setRealTimeProtection] = useState<boolean>(true);
+  const [autoConnect, setAutoConnect] = useState<boolean>(false);
+  const [killSwitch, setKillSwitch] = useState<boolean>(true);
 
   useEffect(() => {
     const initializeApp = async () => {
       await initializeDeviceInfo();
       await loadSecurityData();
       await checkPermissions();
+      await initializeVPNStatus();
+      await loadNetworkProtectionSettings();
     };
     
     initializeApp();
@@ -169,6 +214,54 @@ export default function SecurityScreen() {
     });
   };
 
+  const initializeVPNStatus = async () => {
+    try {
+      // Simulate checking VPN status
+      const isConnected = Math.random() > 0.7;
+      if (isConnected) {
+        setVpnStatus({
+          isConnected: true,
+          serverLocation: 'New York, NY',
+          serverCountry: 'United States',
+          connectionTime: '2h 15m',
+          dataTransferred: { upload: '45.2 MB', download: '128.7 MB' },
+          ipAddress: '198.51.100.42',
+          protocol: 'WireGuard',
+          encryption: 'ChaCha20',
+          latency: 23,
+          isSecure: true
+        });
+      }
+      console.log('VPN status initialized:', vpnStatus);
+    } catch (error) {
+      console.error('Error initializing VPN status:', error);
+    }
+  };
+
+  const loadNetworkProtectionSettings = async () => {
+    try {
+      if (Platform.OS === 'web') {
+        const realTimeProtectionSetting = localStorage.getItem('realTimeProtection');
+        const autoConnectSetting = localStorage.getItem('autoConnect');
+        const killSwitchSetting = localStorage.getItem('killSwitch');
+        
+        if (realTimeProtectionSetting) setRealTimeProtection(JSON.parse(realTimeProtectionSetting));
+        if (autoConnectSetting) setAutoConnect(JSON.parse(autoConnectSetting));
+        if (killSwitchSetting) setKillSwitch(JSON.parse(killSwitchSetting));
+      } else {
+        const realTimeProtectionSetting = await SecureStore?.getItemAsync('realTimeProtection');
+        const autoConnectSetting = await SecureStore?.getItemAsync('autoConnect');
+        const killSwitchSetting = await SecureStore?.getItemAsync('killSwitch');
+        
+        if (realTimeProtectionSetting) setRealTimeProtection(JSON.parse(realTimeProtectionSetting));
+        if (autoConnectSetting) setAutoConnect(JSON.parse(autoConnectSetting));
+        if (killSwitchSetting) setKillSwitch(JSON.parse(killSwitchSetting));
+      }
+    } catch (error) {
+      console.error('Error loading network protection settings:', error);
+    }
+  };
+
   const getDeviceIcon = () => {
     if (!deviceInfo) return Monitor;
     
@@ -228,6 +321,46 @@ export default function SecurityScreen() {
         description: 'Analyze network connections and security',
         icon: Wifi,
         action: handleNetworkScan,
+        available: true
+      },
+      {
+        id: 'vpn-toggle',
+        title: vpnStatus.isConnected ? 'Disconnect VPN' : 'Connect VPN',
+        description: vpnStatus.isConnected ? 'Disconnect from secure VPN server' : 'Connect to secure VPN server',
+        icon: vpnStatus.isConnected ? ShieldCheck : Shield,
+        action: handleVPNToggle,
+        available: true
+      },
+      {
+        id: 'change-server',
+        title: 'Change VPN Server',
+        description: 'Select optimal server location',
+        icon: Server,
+        action: handleChangeVPNServer,
+        available: vpnStatus.isConnected
+      },
+      {
+        id: 'threat-protection',
+        title: 'Threat Protection',
+        description: 'Configure real-time threat blocking',
+        icon: ShieldAlert,
+        action: handleThreatProtection,
+        available: true
+      },
+      {
+        id: 'network-monitor',
+        title: 'Network Monitor',
+        description: 'Monitor network traffic and threats',
+        icon: Activity,
+        action: handleNetworkMonitor,
+        available: true
+      },
+      {
+        id: 'dns-protection',
+        title: 'DNS Protection',
+        description: 'Secure DNS filtering and blocking',
+        icon: Router,
+        action: handleDNSProtection,
         available: true
       }
     ];
@@ -464,15 +597,199 @@ export default function SecurityScreen() {
     );
   };
 
-  const handleNetworkScan = () => {
+  const handleNetworkScan = async () => {
+    setIsScanning(true);
+    
+    try {
+      // Simulate network scan
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const threats = networkThreats.reduce((sum, threat) => sum + threat.count, 0);
+      const vpnProtection = vpnStatus.isConnected ? 'VPN Active' : 'VPN Inactive';
+      
+      Alert.alert(
+        'Network Security Scan Complete',
+        `Network Analysis Results:\n\n` +
+        `Connection Type: ${Platform.OS === 'web' ? 'Web Browser' : 'Mobile Network'}\n` +
+        `VPN Status: ${vpnProtection}\n` +
+        `Encryption: ${vpnStatus.isConnected ? vpnStatus.encryption : 'Standard'}\n` +
+        `Threats Blocked: ${threats}\n` +
+        `Real-time Protection: ${realTimeProtection ? 'Active' : 'Inactive'}\n\n` +
+        `${threats > 0 ? `${threats} threats have been blocked today.` : 'No threats detected.'}`,
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      console.error('Network scan error:', error);
+      Alert.alert('Scan Error', 'Failed to complete network scan. Please try again.');
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  const handleVPNToggle = async () => {
+    if (isConnectingVPN) return;
+    
+    setIsConnectingVPN(true);
+    
+    try {
+      if (vpnStatus.isConnected) {
+        // Disconnect VPN
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        setVpnStatus({
+          ...vpnStatus,
+          isConnected: false,
+          serverLocation: 'Not Connected',
+          serverCountry: '',
+          connectionTime: '',
+          dataTransferred: { upload: '0 MB', download: '0 MB' },
+          ipAddress: '192.168.1.1',
+          latency: 0,
+          isSecure: false
+        });
+        Alert.alert('VPN Disconnected', 'You are no longer connected to the VPN server.');
+      } else {
+        // Connect VPN
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        const servers = [
+          { location: 'New York, NY', country: 'United States', ip: '198.51.100.42' },
+          { location: 'London, UK', country: 'United Kingdom', ip: '203.0.113.15' },
+          { location: 'Tokyo, JP', country: 'Japan', ip: '192.0.2.123' },
+          { location: 'Sydney, AU', country: 'Australia', ip: '198.51.100.89' }
+        ];
+        const selectedServer = servers[Math.floor(Math.random() * servers.length)];
+        
+        setVpnStatus({
+          isConnected: true,
+          serverLocation: selectedServer.location,
+          serverCountry: selectedServer.country,
+          connectionTime: '0m',
+          dataTransferred: { upload: '0 MB', download: '0 MB' },
+          ipAddress: selectedServer.ip,
+          protocol: 'WireGuard',
+          encryption: 'ChaCha20',
+          latency: Math.floor(Math.random() * 50) + 10,
+          isSecure: true
+        });
+        Alert.alert('VPN Connected', `Successfully connected to ${selectedServer.location}`);
+      }
+    } catch (error) {
+      console.error('VPN toggle error:', error);
+      Alert.alert('Connection Error', 'Failed to toggle VPN connection. Please try again.');
+    } finally {
+      setIsConnectingVPN(false);
+    }
+  };
+
+  const handleChangeVPNServer = () => {
+    const servers = [
+      'New York, NY - United States',
+      'London, UK - United Kingdom', 
+      'Tokyo, JP - Japan',
+      'Sydney, AU - Australia',
+      'Frankfurt, DE - Germany',
+      'Singapore, SG - Singapore',
+      'Toronto, CA - Canada',
+      'São Paulo, BR - Brazil'
+    ];
+    
     Alert.alert(
-      'Network Security Check',
-      `Analyzing network security...\n\n` +
-      `Connection Type: ${Platform.OS === 'web' ? 'Web Browser' : 'Mobile Network'}\n` +
-      `Encryption: ${Platform.OS === 'web' ? 'HTTPS/TLS' : 'Cellular/WiFi Encryption'}\n` +
-      `Status: Secure Connection Established\n\n` +
-      `No suspicious network activity detected.`,
+      'Select VPN Server',
+      'Choose your preferred server location:',
+      [
+        ...servers.slice(0, 4).map(server => ({
+          text: server,
+          onPress: () => {
+            const [location, country] = server.split(' - ');
+            setVpnStatus({
+              ...vpnStatus,
+              serverLocation: location,
+              serverCountry: country,
+              latency: Math.floor(Math.random() * 50) + 10
+            });
+            Alert.alert('Server Changed', `Connected to ${location}`);
+          }
+        })),
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
+  const handleThreatProtection = () => {
+    Alert.alert(
+      'Threat Protection Settings',
+      `Configure your security preferences:\n\n` +
+      `Real-time Protection: ${realTimeProtection ? 'Enabled' : 'Disabled'}\n` +
+      `Auto-connect VPN: ${autoConnect ? 'Enabled' : 'Disabled'}\n` +
+      `Kill Switch: ${killSwitch ? 'Enabled' : 'Disabled'}\n\n` +
+      `Threats blocked today: ${networkThreats.reduce((sum, threat) => sum + threat.count, 0)}`,
+      [
+        {
+          text: 'Toggle Real-time Protection',
+          onPress: () => {
+            const newValue = !realTimeProtection;
+            setRealTimeProtection(newValue);
+            if (Platform.OS === 'web') {
+              localStorage.setItem('realTimeProtection', JSON.stringify(newValue));
+            } else {
+              SecureStore?.setItemAsync('realTimeProtection', JSON.stringify(newValue));
+            }
+            Alert.alert('Settings Updated', `Real-time protection ${newValue ? 'enabled' : 'disabled'}`);
+          }
+        },
+        {
+          text: 'Toggle Kill Switch',
+          onPress: () => {
+            const newValue = !killSwitch;
+            setKillSwitch(newValue);
+            if (Platform.OS === 'web') {
+              localStorage.setItem('killSwitch', JSON.stringify(newValue));
+            } else {
+              SecureStore?.setItemAsync('killSwitch', JSON.stringify(newValue));
+            }
+            Alert.alert('Settings Updated', `Kill switch ${newValue ? 'enabled' : 'disabled'}`);
+          }
+        },
+        { text: 'Close', style: 'cancel' }
+      ]
+    );
+  };
+
+  const handleNetworkMonitor = () => {
+    const totalThreats = networkThreats.reduce((sum, threat) => sum + threat.count, 0);
+    const threatBreakdown = networkThreats.map(threat => 
+      `${threat.type.charAt(0).toUpperCase() + threat.type.slice(1)}: ${threat.count} blocked`
+    ).join('\n');
+    
+    Alert.alert(
+      'Network Traffic Monitor',
+      `Real-time network monitoring:\n\n` +
+      `Total Threats Blocked: ${totalThreats}\n\n` +
+      `Breakdown:\n${threatBreakdown}\n\n` +
+      `Data Usage:\n` +
+      `Upload: ${vpnStatus.dataTransferred.upload}\n` +
+      `Download: ${vpnStatus.dataTransferred.download}\n\n` +
+      `Connection Status: ${vpnStatus.isConnected ? 'Secure (VPN)' : 'Unprotected'}`,
       [{ text: 'OK' }]
+    );
+  };
+
+  const handleDNSProtection = () => {
+    Alert.alert(
+      'DNS Protection',
+      `Secure DNS filtering is active:\n\n` +
+      `• Malware domains blocked\n` +
+      `• Phishing sites filtered\n` +
+      `• Adult content filtering\n` +
+      `• Ad tracking prevention\n\n` +
+      `DNS Server: ${vpnStatus.isConnected ? 'VPN Secure DNS' : 'Default DNS'}\n` +
+      `Status: ${realTimeProtection ? 'Active' : 'Inactive'}`,
+      [
+        {
+          text: 'Configure DNS',
+          onPress: () => Alert.alert('DNS Settings', 'DNS configuration options would be available here.')
+        },
+        { text: 'OK' }
+      ]
     );
   };
 
@@ -733,6 +1050,119 @@ export default function SecurityScreen() {
           ))}
         </View>
 
+        {/* VPN Status */}
+        <View style={styles.vpnSection}>
+          <Text style={styles.sectionTitle}>VPN Protection</Text>
+          <View style={styles.vpnCard}>
+            <LinearGradient
+              colors={[Colors.cardBackground, '#2A2A2A']}
+              style={styles.vpnGradient}
+            >
+              <View style={styles.vpnHeader}>
+                <View style={[styles.vpnIcon, { backgroundColor: vpnStatus.isConnected ? Colors.successAlpha : Colors.errorAlpha }]}>
+                  {vpnStatus.isConnected ? (
+                    <ShieldCheck size={32} color={Colors.success} />
+                  ) : (
+                    <ShieldX size={32} color={Colors.error} />
+                  )}
+                </View>
+                <View style={styles.vpnInfo}>
+                  <Text style={styles.vpnTitle}>
+                    {vpnStatus.isConnected ? 'VPN Connected' : 'VPN Disconnected'}
+                  </Text>
+                  <Text style={[styles.vpnStatus, { color: vpnStatus.isConnected ? Colors.success : Colors.error }]}>
+                    {vpnStatus.serverLocation}
+                  </Text>
+                  {vpnStatus.isConnected && (
+                    <Text style={styles.vpnDetails}>
+                      {vpnStatus.protocol} • {vpnStatus.encryption} • {vpnStatus.latency}ms
+                    </Text>
+                  )}
+                </View>
+              </View>
+              
+              {vpnStatus.isConnected && (
+                <View style={styles.vpnStats}>
+                  <View style={styles.vpnStat}>
+                    <Text style={styles.vpnStatLabel}>Upload</Text>
+                    <Text style={styles.vpnStatValue}>{vpnStatus.dataTransferred.upload}</Text>
+                  </View>
+                  <View style={styles.vpnStat}>
+                    <Text style={styles.vpnStatLabel}>Download</Text>
+                    <Text style={styles.vpnStatValue}>{vpnStatus.dataTransferred.download}</Text>
+                  </View>
+                  <View style={styles.vpnStat}>
+                    <Text style={styles.vpnStatLabel}>Duration</Text>
+                    <Text style={styles.vpnStatValue}>{vpnStatus.connectionTime}</Text>
+                  </View>
+                  <View style={styles.vpnStat}>
+                    <Text style={styles.vpnStatLabel}>IP Address</Text>
+                    <Text style={styles.vpnStatValue}>{vpnStatus.ipAddress}</Text>
+                  </View>
+                </View>
+              )}
+              
+              <View style={styles.vpnActions}>
+                <TouchableOpacity 
+                  style={[styles.vpnButton, isConnectingVPN && styles.disabledButton]}
+                  onPress={handleVPNToggle}
+                  disabled={isConnectingVPN}
+                >
+                  <Text style={styles.vpnButtonText}>
+                    {isConnectingVPN ? 'Connecting...' : (vpnStatus.isConnected ? 'Disconnect' : 'Connect VPN')}
+                  </Text>
+                </TouchableOpacity>
+                {vpnStatus.isConnected && (
+                  <TouchableOpacity 
+                    style={[styles.vpnButton, styles.secondaryVpnButton]}
+                    onPress={handleChangeVPNServer}
+                  >
+                    <Text style={[styles.vpnButtonText, styles.secondaryVpnButtonText]}>Change Server</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </LinearGradient>
+          </View>
+        </View>
+
+        {/* Threat Protection */}
+        <View style={styles.threatProtectionSection}>
+          <Text style={styles.sectionTitle}>Threat Protection</Text>
+          <View style={styles.threatProtectionGrid}>
+            {networkThreats.map((threat) => {
+              const getThreatIcon = () => {
+                switch (threat.type) {
+                  case 'malware': return ShieldAlert;
+                  case 'phishing': return AlertTriangle;
+                  case 'tracking': return Eye;
+                  case 'ads': return WifiOff;
+                  default: return Shield;
+                }
+              };
+              
+              const ThreatIcon = getThreatIcon();
+              
+              return (
+                <View key={threat.id} style={styles.threatProtectionCard}>
+                  <LinearGradient
+                    colors={[Colors.cardBackground, '#2A2A2A']}
+                    style={styles.threatProtectionGradient}
+                  >
+                    <View style={[styles.threatProtectionIcon, { backgroundColor: Colors.successAlpha }]}>
+                      <ThreatIcon size={20} color={Colors.success} />
+                    </View>
+                    <Text style={styles.threatProtectionTitle}>
+                      {threat.type.charAt(0).toUpperCase() + threat.type.slice(1)}
+                    </Text>
+                    <Text style={styles.threatProtectionCount}>{threat.count} Blocked</Text>
+                    <Text style={styles.threatProtectionTime}>{threat.lastBlocked}</Text>
+                  </LinearGradient>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+
         {/* Network Security */}
         <View style={styles.networkSection}>
           <Text style={styles.sectionTitle}>Network Security</Text>
@@ -742,11 +1172,11 @@ export default function SecurityScreen() {
                 colors={[Colors.cardBackground, '#2A2A2A']}
                 style={styles.networkGradient}
               >
-                <View style={[styles.networkIcon, { backgroundColor: Colors.primaryAlpha }]}>
-                  <Wifi size={24} color={Colors.primary} />
+                <View style={[styles.networkIcon, { backgroundColor: realTimeProtection ? Colors.successAlpha : Colors.errorAlpha }]}>
+                  <Shield size={24} color={realTimeProtection ? Colors.success : Colors.error} />
                 </View>
-                <Text style={styles.networkTitle}>WiFi Security</Text>
-                <Text style={styles.networkStatus}>WPA3 Encrypted</Text>
+                <Text style={styles.networkTitle}>Real-time Protection</Text>
+                <Text style={styles.networkStatus}>{realTimeProtection ? 'Active' : 'Inactive'}</Text>
               </LinearGradient>
             </View>
             
@@ -755,11 +1185,11 @@ export default function SecurityScreen() {
                 colors={[Colors.cardBackground, '#2A2A2A']}
                 style={styles.networkGradient}
               >
-                <View style={[styles.networkIcon, { backgroundColor: Colors.accentAlpha }]}>
-                  <Server size={24} color={Colors.accent} />
+                <View style={[styles.networkIcon, { backgroundColor: killSwitch ? Colors.successAlpha : Colors.warningAlpha }]}>
+                  <Power size={24} color={killSwitch ? Colors.success : Colors.warning} />
                 </View>
-                <Text style={styles.networkTitle}>Server Status</Text>
-                <Text style={styles.networkStatus}>Secure & Online</Text>
+                <Text style={styles.networkTitle}>Kill Switch</Text>
+                <Text style={styles.networkStatus}>{killSwitch ? 'Enabled' : 'Disabled'}</Text>
               </LinearGradient>
             </View>
             
@@ -768,11 +1198,11 @@ export default function SecurityScreen() {
                 colors={[Colors.cardBackground, '#2A2A2A']}
                 style={styles.networkGradient}
               >
-                <View style={[styles.networkIcon, { backgroundColor: Colors.successAlpha }]}>
-                  <Database size={24} color={Colors.success} />
+                <View style={[styles.networkIcon, { backgroundColor: autoConnect ? Colors.successAlpha : Colors.warningAlpha }]}>
+                  <RotateCcw size={24} color={autoConnect ? Colors.success : Colors.warning} />
                 </View>
-                <Text style={styles.networkTitle}>Data Backup</Text>
-                <Text style={styles.networkStatus}>Last: 2 hours ago</Text>
+                <Text style={styles.networkTitle}>Auto-Connect</Text>
+                <Text style={styles.networkStatus}>{autoConnect ? 'Enabled' : 'Disabled'}</Text>
               </LinearGradient>
             </View>
           </View>
@@ -1041,6 +1471,146 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: Colors.textPrimary,
     fontWeight: '600',
+    textAlign: 'center',
+  },
+  vpnSection: {
+    marginBottom: 32,
+  },
+  vpnCard: {
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  vpnGradient: {
+    padding: 20,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    borderRadius: 16,
+  },
+  vpnHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  vpnIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 20,
+  },
+  vpnInfo: {
+    flex: 1,
+  },
+  vpnTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  vpnStatus: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  vpnDetails: {
+    fontSize: 12,
+    color: Colors.textMuted,
+  },
+  vpnStats: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: Colors.cardBorder,
+  },
+  vpnStat: {
+    width: '48%',
+    marginBottom: 12,
+  },
+  vpnStatLabel: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginBottom: 2,
+  },
+  vpnStatValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
+  vpnActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  vpnButton: {
+    flex: 1,
+    paddingVertical: 12,
+    backgroundColor: Colors.primary,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  secondaryVpnButton: {
+    backgroundColor: Colors.cardBorder,
+    marginRight: 0,
+    marginLeft: 8,
+  },
+  vpnButtonText: {
+    color: Colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  secondaryVpnButtonText: {
+    color: Colors.textSecondary,
+  },
+  threatProtectionSection: {
+    marginBottom: 32,
+  },
+  threatProtectionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  threatProtectionCard: {
+    width: '48%',
+    marginBottom: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  threatProtectionGradient: {
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    borderRadius: 12,
+  },
+  threatProtectionIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  threatProtectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  threatProtectionCount: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.success,
+    marginBottom: 2,
+    textAlign: 'center',
+  },
+  threatProtectionTime: {
+    fontSize: 10,
+    color: Colors.textMuted,
     textAlign: 'center',
   },
   deviceSection: {

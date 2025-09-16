@@ -259,16 +259,26 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
 
     setQueue(prev => [...prev, queueItem]);
     
-    // Update session with queue info
-    const position = getQueuePosition(session.id) + 1;
-    const waitTime = getEstimatedWaitTime(session.id);
-    
-    setActiveSessions(prev => prev.map(s => 
-      s.id === session.id 
-        ? { ...s, queuePosition: position, estimatedWaitTime: waitTime }
-        : s
-    ));
-  }, [getQueuePosition, getEstimatedWaitTime]);
+    // Update session with queue info after a short delay to ensure proper positioning
+    setTimeout(() => {
+      const position = getQueuePosition(session.id) + 1;
+      const waitTime = getEstimatedWaitTime(session.id);
+      
+      setActiveSessions(prev => prev.map(s => 
+        s.id === session.id 
+          ? { ...s, queuePosition: position, estimatedWaitTime: waitTime }
+          : s
+      ));
+      
+      if (currentSession?.id === session.id) {
+        setCurrentSession(prev => prev ? {
+          ...prev,
+          queuePosition: position,
+          estimatedWaitTime: waitTime
+        } : null);
+      }
+    }, 500);
+  }, [getQueuePosition, getEstimatedWaitTime, currentSession]);
 
   const connectToAgent = useCallback(async (sessionId: string): Promise<boolean> => {
     setIsConnecting(true);
@@ -380,7 +390,8 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
       // Connect immediately
       setTimeout(() => connectToAgent(sessionId), 100);
     } else {
-      // Add to queue
+      // Add to queue and update session status
+      session.status = 'queued';
       await addToQueue(session);
     }
     
@@ -523,30 +534,117 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
   // Quick action functions
   const findNextAvailableSupport = useCallback(async (): Promise<ChatSession | null> => {
     const agent = findBestAgent('general');
+    
     if (!agent) {
       console.log('No agents available - adding to queue');
+      const session = await createChatSession('general', 'Looking for next available support agent...');
+      
+      // Add queue acknowledgment message
+      const queueMessage: ChatMessage = {
+        id: `msg_${Date.now()}`,
+        text: "All our support agents are currently busy helping other customers. You've been added to the queue and will be connected to the next available agent. Your estimated wait time is 3-5 minutes.",
+        sender: 'agent',
+        timestamp: new Date(),
+        agentName: 'Support System',
+        type: 'system'
+      };
+      
+      setTimeout(() => {
+        setActiveSessions(prev => prev.map(s => 
+          s.id === session.id 
+            ? { ...s, messages: [...s.messages, queueMessage] }
+            : s
+        ));
+        
+        if (currentSession?.id === session.id) {
+          setCurrentSession(prev => prev ? {
+            ...prev,
+            messages: [...prev.messages, queueMessage]
+          } : null);
+        }
+      }, 1000);
+      
+      return session;
     }
     
     return await createChatSession('general');
-  }, [findBestAgent, createChatSession]);
+  }, [findBestAgent, createChatSession, currentSession]);
 
   const requestRemoteAssistance = useCallback(async (): Promise<ChatSession | null> => {
     const agent = findBestAgent('remote-assistance');
+    
     if (!agent) {
       console.log('No remote specialists available - adding to priority queue');
+      const session = await createChatSession('remote-assistance', 'Requesting remote assistance support...');
+      
+      // Add queue acknowledgment message
+      const queueMessage: ChatMessage = {
+        id: `msg_${Date.now()}`,
+        text: "All our remote assistance specialists are currently busy. You've been added to our priority queue for remote support. A specialist will connect with you shortly and initiate TeamViewer access. Estimated wait time: 2-4 minutes.",
+        sender: 'agent',
+        timestamp: new Date(),
+        agentName: 'Remote Support System',
+        type: 'system'
+      };
+      
+      setTimeout(() => {
+        setActiveSessions(prev => prev.map(s => 
+          s.id === session.id 
+            ? { ...s, messages: [...s.messages, queueMessage] }
+            : s
+        ));
+        
+        if (currentSession?.id === session.id) {
+          setCurrentSession(prev => prev ? {
+            ...prev,
+            messages: [...prev.messages, queueMessage]
+          } : null);
+        }
+      }, 1000);
+      
+      return session;
     }
     
     return await createChatSession('remote-assistance');
-  }, [findBestAgent, createChatSession]);
+  }, [findBestAgent, createChatSession, currentSession]);
 
   const urgentConnectionRequest = useCallback(async (): Promise<ChatSession | null> => {
     const agent = findBestAgent('urgent');
+    
     if (!agent) {
       console.log('No urgent specialists available - adding to high-priority queue');
+      const session = await createChatSession('urgent', 'URGENT: Requesting immediate connection to best support agent...');
+      
+      // Add urgent queue acknowledgment message
+      const queueMessage: ChatMessage = {
+        id: `msg_${Date.now()}`,
+        text: "🚨 URGENT REQUEST RECEIVED: All our senior specialists are currently handling critical issues. You've been placed at the front of our priority queue. Our best available agent will connect with you within 1-2 minutes. Thank you for your patience.",
+        sender: 'agent',
+        timestamp: new Date(),
+        agentName: 'Priority Support System',
+        type: 'system'
+      };
+      
+      setTimeout(() => {
+        setActiveSessions(prev => prev.map(s => 
+          s.id === session.id 
+            ? { ...s, messages: [...s.messages, queueMessage] }
+            : s
+        ));
+        
+        if (currentSession?.id === session.id) {
+          setCurrentSession(prev => prev ? {
+            ...prev,
+            messages: [...prev.messages, queueMessage]
+          } : null);
+        }
+      }, 1000);
+      
+      return session;
     }
     
     return await createChatSession('urgent');
-  }, [findBestAgent, createChatSession]);
+  }, [findBestAgent, createChatSession, currentSession]);
 
   const sendQuickMessage = useCallback(async (message: string): Promise<ChatSession | null> => {
     if (!message?.trim() || message.length > 1000) {
@@ -556,12 +654,40 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
     
     const sanitizedMessage = message.trim();
     const agent = findBestAgent('general');
+    
+    const session = await createChatSession('general', sanitizedMessage);
+    
     if (!agent) {
       console.log('All agents busy - message will be sent when available');
+      
+      // Add queue acknowledgment message for quick messages
+      const queueMessage: ChatMessage = {
+        id: `msg_${Date.now()}`,
+        text: "Thank you for your message! All our support agents are currently assisting other customers. Your message has been received and you've been added to the queue. An agent will respond to your message shortly. Estimated wait time: 3-5 minutes.",
+        sender: 'agent',
+        timestamp: new Date(),
+        agentName: 'Support System',
+        type: 'system'
+      };
+      
+      setTimeout(() => {
+        setActiveSessions(prev => prev.map(s => 
+          s.id === session.id 
+            ? { ...s, messages: [...s.messages, queueMessage] }
+            : s
+        ));
+        
+        if (currentSession?.id === session.id) {
+          setCurrentSession(prev => prev ? {
+            ...prev,
+            messages: [...prev.messages, queueMessage]
+          } : null);
+        }
+      }, 1500);
     }
     
-    return await createChatSession('general', sanitizedMessage);
-  }, [findBestAgent, createChatSession]);
+    return session;
+  }, [findBestAgent, createChatSession, currentSession]);
 
   return useMemo(() => ({
     agents,

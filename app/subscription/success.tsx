@@ -241,7 +241,7 @@ export default function SubscriptionSuccessScreen() {
             style={styles.featuresGradient}
           >
             <View style={styles.featuresHeader}>
-              <Text style={styles.featuresTitle}>What&apos;s Included</Text>
+              <Text style={styles.featuresTitle}>What's Included</Text>
             </View>
             
             <View style={styles.featuresList}>

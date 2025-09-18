@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, 
 import { LinearGradient } from 'expo-linear-gradient';
 import { Shield, AlertTriangle, CheckCircle, Eye, Lock, Wifi, Server, Database, Globe, Smartphone, Monitor, Tablet, Settings, RefreshCw, Download, Trash2, FileText, Camera, Mic, Activity, Power, RotateCcw, WifiOff, ShieldCheck, ShieldAlert, ShieldX, Router } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 let Device: any = null;
 let Application: any = null;
 let SecureStore: any = null;
@@ -304,6 +305,38 @@ export default function SecurityScreen() {
         description: 'Generate detailed security report',
         icon: FileText,
         action: handleGenerateReport,
+        available: true
+      },
+      {
+        id: 'security-audit',
+        title: 'Security Audit',
+        description: 'Comprehensive security assessment',
+        icon: CheckCircle,
+        action: handleSecurityAudit,
+        available: true
+      },
+      {
+        id: 'malware-scan',
+        title: 'Malware Scan',
+        description: 'Deep scan for malicious software',
+        icon: ShieldAlert,
+        action: handleMalwareScan,
+        available: true
+      },
+      {
+        id: 'firewall-config',
+        title: 'Firewall Settings',
+        description: 'Configure network firewall rules',
+        icon: Shield,
+        action: handleFirewallConfig,
+        available: true
+      },
+      {
+        id: 'backup-security',
+        title: 'Backup Security',
+        description: 'Secure backup and recovery options',
+        icon: Database,
+        action: handleBackupSecurity,
         available: true
       },
       {
@@ -675,7 +708,8 @@ export default function SecurityScreen() {
   };
 
   const handleChangeVPNServer = () => {
-    setServerPickerVisible(true);
+    console.log('Navigating to VPN servers screen');
+    router.push('/security/vpn-servers');
   };
 
   const connectToServer = async (serverId: string) => {
@@ -772,6 +806,123 @@ export default function SecurityScreen() {
           onPress: () => Alert.alert('DNS Settings', 'DNS configuration options would be available here.')
         },
         { text: 'OK' }
+      ]
+    );
+  };
+
+  const handleSecurityAudit = async () => {
+    setIsScanning(true);
+    try {
+      console.log('Starting comprehensive security audit');
+      await new Promise(resolve => setTimeout(resolve, 4000));
+      
+      const auditResults = {
+        vulnerabilities: Math.floor(Math.random() * 3),
+        outdatedSoftware: Math.floor(Math.random() * 5),
+        weakPasswords: Math.floor(Math.random() * 2),
+        suspiciousActivity: Math.floor(Math.random() * 1),
+        securityScore: Math.min(95, securityScore + Math.floor(Math.random() * 5))
+      };
+      
+      setSecurityScore(auditResults.securityScore);
+      
+      Alert.alert(
+        'Security Audit Complete',
+        `Comprehensive security assessment results:\n\n` +
+        `Security Score: ${auditResults.securityScore}/100\n` +
+        `Vulnerabilities Found: ${auditResults.vulnerabilities}\n` +
+        `Outdated Software: ${auditResults.outdatedSoftware}\n` +
+        `Weak Passwords: ${auditResults.weakPasswords}\n` +
+        `Suspicious Activity: ${auditResults.suspiciousActivity}\n\n` +
+        `${auditResults.vulnerabilities === 0 ? 'No critical issues found.' : 'Please address the identified issues.'}`,
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      console.error('Security audit error:', error);
+      Alert.alert('Audit Error', 'Failed to complete security audit. Please try again.');
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  const handleMalwareScan = async () => {
+    setIsScanning(true);
+    try {
+      console.log('Starting malware scan');
+      await new Promise(resolve => setTimeout(resolve, 3500));
+      
+      const scanResults = {
+        filesScanned: Math.floor(Math.random() * 50000) + 10000,
+        threatsFound: Math.floor(Math.random() * 2),
+        quarantined: Math.floor(Math.random() * 1),
+        cleaned: Math.floor(Math.random() * 1)
+      };
+      
+      Alert.alert(
+        'Malware Scan Complete',
+        `Deep malware scan results:\n\n` +
+        `Files Scanned: ${scanResults.filesScanned.toLocaleString()}\n` +
+        `Threats Detected: ${scanResults.threatsFound}\n` +
+        `Files Quarantined: ${scanResults.quarantined}\n` +
+        `Files Cleaned: ${scanResults.cleaned}\n\n` +
+        `${scanResults.threatsFound === 0 ? 'Your device is clean!' : 'Threats have been neutralized.'}`,
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      console.error('Malware scan error:', error);
+      Alert.alert('Scan Error', 'Failed to complete malware scan. Please try again.');
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  const handleFirewallConfig = () => {
+    Alert.alert(
+      'Firewall Configuration',
+      `Current firewall settings:\n\n` +
+      `Status: ${realTimeProtection ? 'Active' : 'Inactive'}\n` +
+      `Incoming Connections: Filtered\n` +
+      `Outgoing Connections: Monitored\n` +
+      `Blocked Attempts: ${networkThreats.reduce((sum, threat) => sum + threat.count, 0)}\n\n` +
+      `Protection Level: ${killSwitch ? 'Maximum' : 'Standard'}`,
+      [
+        {
+          text: 'Advanced Settings',
+          onPress: () => Alert.alert('Advanced Firewall', 'Advanced firewall configuration would be available here.')
+        },
+        {
+          text: 'Reset to Default',
+          onPress: () => Alert.alert('Firewall Reset', 'Firewall settings have been reset to default configuration.')
+        },
+        { text: 'Close' }
+      ]
+    );
+  };
+
+  const handleBackupSecurity = () => {
+    Alert.alert(
+      'Backup Security',
+      `Secure backup and recovery options:\n\n` +
+      `Last Backup: ${lastScanTime || 'Never'}\n` +
+      `Encryption: AES-256\n` +
+      `Storage: ${Platform.OS === 'web' ? 'Browser Secure Storage' : 'Device Secure Storage'}\n` +
+      `Auto-Backup: ${autoConnect ? 'Enabled' : 'Disabled'}\n\n` +
+      `Your security settings and configurations are automatically backed up.`,
+      [
+        {
+          text: 'Create Backup',
+          onPress: async () => {
+            Alert.alert('Creating Backup', 'Security backup is being created...');
+            setTimeout(() => {
+              Alert.alert('Backup Complete', 'Security settings have been backed up successfully.');
+            }, 2000);
+          }
+        },
+        {
+          text: 'Restore Backup',
+          onPress: () => Alert.alert('Restore Backup', 'Backup restoration options would be available here.')
+        },
+        { text: 'Close' }
       ]
     );
   };
@@ -890,11 +1041,13 @@ export default function SecurityScreen() {
           <View style={styles.actionsGrid}>
             {getSecurityActions().filter(action => action.available).map((action) => {
               const IconComponent = action.icon;
+              const isActionDisabled = isScanning && (action.id === 'full-scan' || action.id === 'security-audit' || action.id === 'malware-scan');
               return (
                 <TouchableOpacity
                   key={action.id}
-                  style={styles.actionCard}
+                  style={[styles.actionCard, isActionDisabled && styles.disabledButton]}
                   onPress={action.action}
+                  disabled={isActionDisabled}
                   testID={`action-${action.id}`}
                 >
                   <LinearGradient

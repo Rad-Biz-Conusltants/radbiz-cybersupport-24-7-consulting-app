@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Dimensions, Modal, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Shield, AlertTriangle, CheckCircle, Eye, Lock, Wifi, Server, Database, Globe, Smartphone, Monitor, Tablet, Settings, RefreshCw, Download, Trash2, FileText, Camera, Mic, Zap, MapPin, Activity, Power, RotateCcw, WifiOff, ShieldCheck, ShieldAlert, ShieldX, Network, Router, Signal } from 'lucide-react-native';
+import { Shield, AlertTriangle, CheckCircle, Eye, Lock, Wifi, Server, Database, Globe, Smartphone, Monitor, Tablet, Settings, RefreshCw, Download, Trash2, FileText, Camera, Mic, Activity, Power, RotateCcw, WifiOff, ShieldCheck, ShieldAlert, ShieldX, Router } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-// Platform-specific imports with web compatibility
 let Device: any = null;
 let Application: any = null;
 let SecureStore: any = null;
+let ClipboardMod: any = null;
 
 if (Platform.OS !== 'web') {
   Device = require('expo-device');
   Application = require('expo-application');
   SecureStore = require('expo-secure-store');
+  ClipboardMod = require('expo-clipboard');
 }
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
@@ -121,6 +122,8 @@ export default function SecurityScreen() {
   const [realTimeProtection, setRealTimeProtection] = useState<boolean>(true);
   const [autoConnect, setAutoConnect] = useState<boolean>(false);
   const [killSwitch, setKillSwitch] = useState<boolean>(true);
+  const [serverPickerVisible, setServerPickerVisible] = useState<boolean>(false);
+  const [availableServers, setAvailableServers] = useState<{ id: string; location: string; country: string; ip: string; latency: number }[]>([]);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -129,17 +132,33 @@ export default function SecurityScreen() {
       await checkPermissions();
       await initializeVPNStatus();
       await loadNetworkProtectionSettings();
+      await initializeServers();
     };
-    
     initializeApp();
   }, []);
+
+  const initializeServers = async () => {
+    try {
+      const base = [
+        { id: 'ny-us', location: 'New York, NY', country: 'United States', ip: '198.51.100.42', latency: 22 },
+        { id: 'ldn-uk', location: 'London, UK', country: 'United Kingdom', ip: '203.0.113.15', latency: 46 },
+        { id: 'tky-jp', location: 'Tokyo, JP', country: 'Japan', ip: '192.0.2.123', latency: 118 },
+        { id: 'syd-au', location: 'Sydney, AU', country: 'Australia', ip: '198.51.100.89', latency: 152 },
+        { id: 'fra-de', location: 'Frankfurt, DE', country: 'Germany', ip: '203.0.113.44', latency: 70 },
+        { id: 'sin-sg', location: 'Singapore, SG', country: 'Singapore', ip: '192.0.2.88', latency: 110 },
+        { id: 'tor-ca', location: 'Toronto, CA', country: 'Canada', ip: '198.51.100.61', latency: 38 },
+        { id: 'sao-br', location: 'São Paulo, BR', country: 'Brazil', ip: '203.0.113.77', latency: 140 },
+      ];
+      setAvailableServers(base);
+    } catch (e) {
+      console.error('initializeServers error', e);
+    }
+  };
 
   const initializeDeviceInfo = async () => {
     try {
       const screenData = Dimensions.get('screen');
-      
       if (Platform.OS === 'web') {
-        // Web-specific device info
         const deviceData: DeviceInfo = {
           platform: 'web',
           deviceType: screenData.width > 768 ? 'Desktop' : 'Mobile',
@@ -153,7 +172,6 @@ export default function SecurityScreen() {
         };
         setDeviceInfo(deviceData);
       } else {
-        // Native device info
         const deviceData: DeviceInfo = {
           platform: Platform.OS,
           deviceType: Device?.deviceType === Device?.DeviceType?.PHONE ? 'Phone' : 
@@ -166,7 +184,6 @@ export default function SecurityScreen() {
         };
         setDeviceInfo(deviceData);
       }
-      
       console.log('Device info initialized:', deviceInfo);
     } catch (error) {
       console.error('Error initializing device info:', error);
@@ -176,27 +193,15 @@ export default function SecurityScreen() {
   const loadSecurityData = async () => {
     try {
       if (Platform.OS === 'web') {
-        // Use localStorage for web
         const lastScan = localStorage.getItem('lastSecurityScan');
-        if (lastScan) {
-          setLastScanTime(lastScan);
-        }
-        
+        if (lastScan) setLastScanTime(lastScan);
         const savedScore = localStorage.getItem('securityScore');
-        if (savedScore) {
-          setSecurityScore(parseInt(savedScore));
-        }
+        if (savedScore) setSecurityScore(parseInt(savedScore));
       } else {
-        // Use SecureStore for native
         const lastScan = await SecureStore?.getItemAsync('lastSecurityScan');
-        if (lastScan) {
-          setLastScanTime(lastScan);
-        }
-        
+        if (lastScan) setLastScanTime(lastScan);
         const savedScore = await SecureStore?.getItemAsync('securityScore');
-        if (savedScore) {
-          setSecurityScore(parseInt(savedScore));
-        }
+        if (savedScore) setSecurityScore(parseInt(savedScore));
       }
     } catch (error) {
       console.error('Error loading security data:', error);
@@ -204,7 +209,6 @@ export default function SecurityScreen() {
   };
 
   const checkPermissions = async () => {
-    // This is a mock implementation - in a real app you'd check actual permissions
     setPermissions({
       camera: Math.random() > 0.3,
       microphone: Math.random() > 0.3,
@@ -216,7 +220,6 @@ export default function SecurityScreen() {
 
   const initializeVPNStatus = async () => {
     try {
-      // Simulate checking VPN status
       const isConnected = Math.random() > 0.7;
       if (isConnected) {
         setVpnStatus({
@@ -241,21 +244,19 @@ export default function SecurityScreen() {
   const loadNetworkProtectionSettings = async () => {
     try {
       if (Platform.OS === 'web') {
-        const realTimeProtectionSetting = localStorage.getItem('realTimeProtection');
-        const autoConnectSetting = localStorage.getItem('autoConnect');
-        const killSwitchSetting = localStorage.getItem('killSwitch');
-        
-        if (realTimeProtectionSetting) setRealTimeProtection(JSON.parse(realTimeProtectionSetting));
-        if (autoConnectSetting) setAutoConnect(JSON.parse(autoConnectSetting));
-        if (killSwitchSetting) setKillSwitch(JSON.parse(killSwitchSetting));
+        const r = localStorage.getItem('realTimeProtection');
+        const a = localStorage.getItem('autoConnect');
+        const k = localStorage.getItem('killSwitch');
+        if (r) setRealTimeProtection(JSON.parse(r));
+        if (a) setAutoConnect(JSON.parse(a));
+        if (k) setKillSwitch(JSON.parse(k));
       } else {
-        const realTimeProtectionSetting = await SecureStore?.getItemAsync('realTimeProtection');
-        const autoConnectSetting = await SecureStore?.getItemAsync('autoConnect');
-        const killSwitchSetting = await SecureStore?.getItemAsync('killSwitch');
-        
-        if (realTimeProtectionSetting) setRealTimeProtection(JSON.parse(realTimeProtectionSetting));
-        if (autoConnectSetting) setAutoConnect(JSON.parse(autoConnectSetting));
-        if (killSwitchSetting) setKillSwitch(JSON.parse(killSwitchSetting));
+        const r = await SecureStore?.getItemAsync('realTimeProtection');
+        const a = await SecureStore?.getItemAsync('autoConnect');
+        const k = await SecureStore?.getItemAsync('killSwitch');
+        if (r) setRealTimeProtection(JSON.parse(r));
+        if (a) setAutoConnect(JSON.parse(a));
+        if (k) setKillSwitch(JSON.parse(k));
       }
     } catch (error) {
       console.error('Error loading network protection settings:', error);
@@ -264,7 +265,6 @@ export default function SecurityScreen() {
 
   const getDeviceIcon = () => {
     if (!deviceInfo) return Monitor;
-    
     switch (deviceInfo.deviceType) {
       case 'Phone': return Smartphone;
       case 'Tablet': return Tablet;
@@ -337,7 +337,7 @@ export default function SecurityScreen() {
         description: 'Select optimal server location',
         icon: Server,
         action: handleChangeVPNServer,
-        available: vpnStatus.isConnected
+        available: true
       },
       {
         id: 'threat-protection',
@@ -408,7 +408,6 @@ export default function SecurityScreen() {
       }
     ];
 
-    // Add platform-specific metrics
     if (Platform.OS === 'ios') {
       baseMetrics.push({
         id: 'ios-security',
@@ -497,14 +496,10 @@ export default function SecurityScreen() {
 
   const handleFullSecurityScan = async () => {
     setIsScanning(true);
-    
     try {
-      // Simulate security scan process
       await new Promise(resolve => setTimeout(resolve, 3000));
-      
       const currentTime = new Date().toLocaleString();
       const newScore = Math.min(95, securityScore + Math.floor(Math.random() * 10));
-      
       if (Platform.OS === 'web') {
         localStorage.setItem('lastSecurityScan', currentTime);
         localStorage.setItem('securityScore', newScore.toString());
@@ -512,10 +507,8 @@ export default function SecurityScreen() {
         await SecureStore?.setItemAsync('lastSecurityScan', currentTime);
         await SecureStore?.setItemAsync('securityScore', newScore.toString());
       }
-      
       setLastScanTime(currentTime);
       setSecurityScore(newScore);
-      
       Alert.alert(
         'Security Scan Complete',
         `Scan completed successfully!\n\nSecurity Score: ${newScore}/100\nThreats Found: 0\nVulnerabilities: ${100 - newScore > 10 ? 'Minor issues detected' : 'None detected'}`,
@@ -538,7 +531,6 @@ export default function SecurityScreen() {
         { 
           text: 'Update Now', 
           onPress: async () => {
-            // Simulate update process
             Alert.alert('Updates Started', 'Security definitions are being updated...');
             setTimeout(() => {
               Alert.alert('Update Complete', 'Security definitions updated successfully!');
@@ -566,7 +558,7 @@ export default function SecurityScreen() {
     );
   };
 
-  const handleGenerateReport = () => {
+  const handleGenerateReport = async () => {
     const report = `Security Report - ${new Date().toLocaleDateString()}\n\n` +
       `Device: ${deviceInfo?.deviceName}\n` +
       `Platform: ${deviceInfo?.platform} ${deviceInfo?.osVersion}\n` +
@@ -579,8 +571,22 @@ export default function SecurityScreen() {
       `- Location: ${permissions.location ? 'Granted' : 'Denied'}\n` +
       `- Notifications: ${permissions.notifications ? 'Granted' : 'Denied'}\n` +
       `- Storage: ${permissions.storage ? 'Granted' : 'Denied'}`;
-    
-    Alert.alert('Security Report', report, [{ text: 'OK' }]);
+    try {
+      if (Platform.OS === 'web') {
+        await (navigator as any)?.clipboard?.writeText?.(report);
+        Alert.alert('Security Report', 'Copied to clipboard.');
+        return;
+      }
+      if (ClipboardMod?.setStringAsync) {
+        await ClipboardMod.setStringAsync(report);
+        Alert.alert('Security Report', 'Copied to clipboard.');
+        return;
+      }
+      Alert.alert('Security Report', report, [{ text: 'OK' }]);
+    } catch (e) {
+      console.error('Copy report failed', e);
+      Alert.alert('Security Report', report, [{ text: 'OK' }]);
+    }
   };
 
   const handlePrivacyScan = () => {
@@ -599,14 +605,10 @@ export default function SecurityScreen() {
 
   const handleNetworkScan = async () => {
     setIsScanning(true);
-    
     try {
-      // Simulate network scan
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
       const threats = networkThreats.reduce((sum, threat) => sum + threat.count, 0);
       const vpnProtection = vpnStatus.isConnected ? 'VPN Active' : 'VPN Inactive';
-      
       Alert.alert(
         'Network Security Scan Complete',
         `Network Analysis Results:\n\n` +
@@ -628,12 +630,9 @@ export default function SecurityScreen() {
 
   const handleVPNToggle = async () => {
     if (isConnectingVPN) return;
-    
     setIsConnectingVPN(true);
-    
     try {
       if (vpnStatus.isConnected) {
-        // Disconnect VPN
         await new Promise(resolve => setTimeout(resolve, 1500));
         setVpnStatus({
           ...vpnStatus,
@@ -648,16 +647,11 @@ export default function SecurityScreen() {
         });
         Alert.alert('VPN Disconnected', 'You are no longer connected to the VPN server.');
       } else {
-        // Connect VPN
         await new Promise(resolve => setTimeout(resolve, 2000));
-        const servers = [
-          { location: 'New York, NY', country: 'United States', ip: '198.51.100.42' },
-          { location: 'London, UK', country: 'United Kingdom', ip: '203.0.113.15' },
-          { location: 'Tokyo, JP', country: 'Japan', ip: '192.0.2.123' },
-          { location: 'Sydney, AU', country: 'Australia', ip: '198.51.100.89' }
+        const servers = availableServers.length ? availableServers : [
+          { id: 'ny-us', location: 'New York, NY', country: 'United States', ip: '198.51.100.42', latency: 22 },
         ];
         const selectedServer = servers[Math.floor(Math.random() * servers.length)];
-        
         setVpnStatus({
           isConnected: true,
           serverLocation: selectedServer.location,
@@ -667,7 +661,7 @@ export default function SecurityScreen() {
           ipAddress: selectedServer.ip,
           protocol: 'WireGuard',
           encryption: 'ChaCha20',
-          latency: Math.floor(Math.random() * 50) + 10,
+          latency: selectedServer.latency,
           isSecure: true
         });
         Alert.alert('VPN Connected', `Successfully connected to ${selectedServer.location}`);
@@ -681,37 +675,35 @@ export default function SecurityScreen() {
   };
 
   const handleChangeVPNServer = () => {
-    const servers = [
-      'New York, NY - United States',
-      'London, UK - United Kingdom', 
-      'Tokyo, JP - Japan',
-      'Sydney, AU - Australia',
-      'Frankfurt, DE - Germany',
-      'Singapore, SG - Singapore',
-      'Toronto, CA - Canada',
-      'São Paulo, BR - Brazil'
-    ];
-    
-    Alert.alert(
-      'Select VPN Server',
-      'Choose your preferred server location:',
-      [
-        ...servers.slice(0, 4).map(server => ({
-          text: server,
-          onPress: () => {
-            const [location, country] = server.split(' - ');
-            setVpnStatus({
-              ...vpnStatus,
-              serverLocation: location,
-              serverCountry: country,
-              latency: Math.floor(Math.random() * 50) + 10
-            });
-            Alert.alert('Server Changed', `Connected to ${location}`);
-          }
-        })),
-        { text: 'Cancel', style: 'cancel' }
-      ]
-    );
+    setServerPickerVisible(true);
+  };
+
+  const connectToServer = async (serverId: string) => {
+    try {
+      const s = availableServers.find(x => x.id === serverId);
+      if (!s) return;
+      setIsConnectingVPN(true);
+      await new Promise(r => setTimeout(r, 1000));
+      setVpnStatus({
+        isConnected: true,
+        serverLocation: s.location,
+        serverCountry: s.country,
+        connectionTime: '0m',
+        dataTransferred: { upload: '0 MB', download: '0 MB' },
+        ipAddress: s.ip,
+        protocol: 'WireGuard',
+        encryption: 'ChaCha20',
+        latency: s.latency,
+        isSecure: true,
+      });
+      setServerPickerVisible(false);
+      Alert.alert('VPN Connected', `Connected to ${s.location}`);
+    } catch (e) {
+      console.error('connectToServer', e);
+      Alert.alert('VPN', 'Failed to connect to server.');
+    } finally {
+      setIsConnectingVPN(false);
+    }
   };
 
   const handleThreatProtection = () => {
@@ -725,28 +717,22 @@ export default function SecurityScreen() {
       [
         {
           text: 'Toggle Real-time Protection',
-          onPress: () => {
-            const newValue = !realTimeProtection;
-            setRealTimeProtection(newValue);
-            if (Platform.OS === 'web') {
-              localStorage.setItem('realTimeProtection', JSON.stringify(newValue));
-            } else {
-              SecureStore?.setItemAsync('realTimeProtection', JSON.stringify(newValue));
-            }
-            Alert.alert('Settings Updated', `Real-time protection ${newValue ? 'enabled' : 'disabled'}`);
+          onPress: async () => {
+            const v = !realTimeProtection;
+            setRealTimeProtection(v);
+            if (Platform.OS === 'web') localStorage.setItem('realTimeProtection', JSON.stringify(v));
+            else await SecureStore?.setItemAsync('realTimeProtection', JSON.stringify(v));
+            Alert.alert('Settings Updated', `Real-time protection ${v ? 'enabled' : 'disabled'}`);
           }
         },
         {
           text: 'Toggle Kill Switch',
-          onPress: () => {
-            const newValue = !killSwitch;
-            setKillSwitch(newValue);
-            if (Platform.OS === 'web') {
-              localStorage.setItem('killSwitch', JSON.stringify(newValue));
-            } else {
-              SecureStore?.setItemAsync('killSwitch', JSON.stringify(newValue));
-            }
-            Alert.alert('Settings Updated', `Kill switch ${newValue ? 'enabled' : 'disabled'}`);
+          onPress: async () => {
+            const v = !killSwitch;
+            setKillSwitch(v);
+            if (Platform.OS === 'web') localStorage.setItem('killSwitch', JSON.stringify(v));
+            else await SecureStore?.setItemAsync('killSwitch', JSON.stringify(v));
+            Alert.alert('Settings Updated', `Kill switch ${v ? 'enabled' : 'disabled'}`);
           }
         },
         { text: 'Close', style: 'cancel' }
@@ -756,10 +742,7 @@ export default function SecurityScreen() {
 
   const handleNetworkMonitor = () => {
     const totalThreats = networkThreats.reduce((sum, threat) => sum + threat.count, 0);
-    const threatBreakdown = networkThreats.map(threat => 
-      `${threat.type.charAt(0).toUpperCase() + threat.type.slice(1)}: ${threat.count} blocked`
-    ).join('\n');
-    
+    const threatBreakdown = networkThreats.map(threat => `${threat.type.charAt(0).toUpperCase() + threat.type.slice(1)}: ${threat.count} blocked`).join('\n');
     Alert.alert(
       'Network Traffic Monitor',
       `Real-time network monitoring:\n\n` +
@@ -804,6 +787,14 @@ export default function SecurityScreen() {
     }
   };
 
+  const toggleAndPersist = async (key: 'realTimeProtection' | 'killSwitch' | 'autoConnect', value: boolean) => {
+    if (Platform.OS === 'web') {
+      localStorage.setItem(key, JSON.stringify(value));
+    } else {
+      await SecureStore?.setItemAsync(key, JSON.stringify(value));
+    }
+  };
+
   return (
     <LinearGradient
       colors={[Colors.backgroundStart, Colors.backgroundEnd]}
@@ -812,16 +803,15 @@ export default function SecurityScreen() {
       <ScrollView 
         contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20 }]}
         showsVerticalScrollIndicator={false}
+        testID="security-scroll"
       >
-        {/* Header */}
-        <View style={styles.header}>
+        <View style={styles.header} testID="security-header">
           <Text style={styles.headerTitle}>Security Center</Text>
           <Text style={styles.headerSubtitle}>
             Monitor and manage your cybersecurity status
           </Text>
         </View>
 
-        {/* Device Information */}
         {deviceInfo && (
           <View style={styles.deviceSection}>
             <View style={styles.deviceCard}>
@@ -848,7 +838,6 @@ export default function SecurityScreen() {
           </View>
         )}
 
-        {/* Security Overview */}
         <View style={styles.overviewSection}>
           <View style={styles.overviewCard}>
             <LinearGradient
@@ -878,6 +867,7 @@ export default function SecurityScreen() {
                   style={[styles.actionButton, isScanning && styles.disabledButton]}
                   onPress={handleFullSecurityScan}
                   disabled={isScanning}
+                  testID="btn-run-full-scan"
                 >
                   <Text style={styles.actionButtonText}>
                     {isScanning ? 'Scanning...' : 'Run Full Scan'}
@@ -886,6 +876,7 @@ export default function SecurityScreen() {
                 <TouchableOpacity 
                   style={[styles.actionButton, styles.secondaryButton]}
                   onPress={handleGenerateReport}
+                  testID="btn-security-report"
                 >
                   <Text style={[styles.actionButtonText, styles.secondaryButtonText]}>Security Report</Text>
                 </TouchableOpacity>
@@ -894,7 +885,6 @@ export default function SecurityScreen() {
           </View>
         </View>
 
-        {/* Security Actions */}
         <View style={styles.actionsSection}>
           <Text style={styles.sectionTitle}>Security Actions</Text>
           <View style={styles.actionsGrid}>
@@ -905,6 +895,7 @@ export default function SecurityScreen() {
                   key={action.id}
                   style={styles.actionCard}
                   onPress={action.action}
+                  testID={`action-${action.id}`}
                 >
                   <LinearGradient
                     colors={[Colors.cardBackground, '#2A2A2A']}
@@ -922,7 +913,6 @@ export default function SecurityScreen() {
           </View>
         </View>
 
-        {/* Security Metrics */}
         <View style={styles.metricsSection}>
           <Text style={styles.sectionTitle}>Security Metrics</Text>
           <View style={styles.metricsGrid}>
@@ -962,7 +952,6 @@ export default function SecurityScreen() {
           </View>
         </View>
 
-        {/* Permissions Status */}
         <View style={styles.permissionsSection}>
           <Text style={styles.sectionTitle}>App Permissions</Text>
           <View style={styles.permissionsList}>
@@ -975,7 +964,6 @@ export default function SecurityScreen() {
             ].map((permission) => {
               const IconComponent = permission.icon;
               const isGranted = permissions[permission.key as keyof PermissionStatus];
-              
               return (
                 <View key={permission.key} style={styles.permissionCard}>
                   <LinearGradient
@@ -1003,10 +991,8 @@ export default function SecurityScreen() {
           </View>
         </View>
 
-        {/* Recent Threats */}
         <View style={styles.threatsSection}>
           <Text style={styles.sectionTitle}>Recent Security Events</Text>
-          
           {recentThreats.map((threat) => (
             <TouchableOpacity
               key={threat.id}
@@ -1030,7 +1016,6 @@ export default function SecurityScreen() {
                     <Text style={styles.threatDescription}>{threat.description}</Text>
                     <Text style={styles.threatTimestamp}>{threat.timestamp}</Text>
                   </View>
-                  
                   <View style={styles.threatStatus}>
                     {threat.resolved ? (
                       <View style={[styles.statusIndicator, { backgroundColor: Colors.successAlpha }]}>
@@ -1050,7 +1035,6 @@ export default function SecurityScreen() {
           ))}
         </View>
 
-        {/* VPN Status */}
         <View style={styles.vpnSection}>
           <Text style={styles.sectionTitle}>VPN Protection</Text>
           <View style={styles.vpnCard}>
@@ -1080,7 +1064,6 @@ export default function SecurityScreen() {
                   )}
                 </View>
               </View>
-              
               {vpnStatus.isConnected && (
                 <View style={styles.vpnStats}>
                   <View style={styles.vpnStat}>
@@ -1101,31 +1084,29 @@ export default function SecurityScreen() {
                   </View>
                 </View>
               )}
-              
               <View style={styles.vpnActions}>
                 <TouchableOpacity 
                   style={[styles.vpnButton, isConnectingVPN && styles.disabledButton]}
                   onPress={handleVPNToggle}
                   disabled={isConnectingVPN}
+                  testID="btn-vpn-toggle"
                 >
                   <Text style={styles.vpnButtonText}>
                     {isConnectingVPN ? 'Connecting...' : (vpnStatus.isConnected ? 'Disconnect' : 'Connect VPN')}
                   </Text>
                 </TouchableOpacity>
-                {vpnStatus.isConnected && (
-                  <TouchableOpacity 
-                    style={[styles.vpnButton, styles.secondaryVpnButton]}
-                    onPress={handleChangeVPNServer}
-                  >
-                    <Text style={[styles.vpnButtonText, styles.secondaryVpnButtonText]}>Change Server</Text>
-                  </TouchableOpacity>
-                )}
+                <TouchableOpacity 
+                  style={[styles.vpnButton, styles.secondaryVpnButton]}
+                  onPress={handleChangeVPNServer}
+                  testID="btn-vpn-change-server"
+                >
+                  <Text style={[styles.vpnButtonText, styles.secondaryVpnButtonText]}>Change Server</Text>
+                </TouchableOpacity>
               </View>
             </LinearGradient>
           </View>
         </View>
 
-        {/* Threat Protection */}
         <View style={styles.threatProtectionSection}>
           <Text style={styles.sectionTitle}>Threat Protection</Text>
           <View style={styles.threatProtectionGrid}>
@@ -1139,11 +1120,9 @@ export default function SecurityScreen() {
                   default: return Shield;
                 }
               };
-              
               const ThreatIcon = getThreatIcon();
-              
               return (
-                <View key={threat.id} style={styles.threatProtectionCard}>
+                <TouchableOpacity key={threat.id} style={styles.threatProtectionCard} onPress={() => Alert.alert(`${threat.type}`, `${threat.count} blocked. Last: ${threat.lastBlocked}`)} testID={`threat-card-${threat.id}`}>
                   <LinearGradient
                     colors={[Colors.cardBackground, '#2A2A2A']}
                     style={styles.threatProtectionGradient}
@@ -1157,17 +1136,16 @@ export default function SecurityScreen() {
                     <Text style={styles.threatProtectionCount}>{threat.count} Blocked</Text>
                     <Text style={styles.threatProtectionTime}>{threat.lastBlocked}</Text>
                   </LinearGradient>
-                </View>
+                </TouchableOpacity>
               );
             })}
           </View>
         </View>
 
-        {/* Network Security */}
         <View style={styles.networkSection}>
           <Text style={styles.sectionTitle}>Network Security</Text>
           <View style={styles.networkGrid}>
-            <View style={styles.networkCard}>
+            <TouchableOpacity style={styles.networkCard} onPress={async () => { const v = !realTimeProtection; setRealTimeProtection(v); await toggleAndPersist('realTimeProtection', v); }} testID="card-realtime">
               <LinearGradient
                 colors={[Colors.cardBackground, '#2A2A2A']}
                 style={styles.networkGradient}
@@ -1178,9 +1156,9 @@ export default function SecurityScreen() {
                 <Text style={styles.networkTitle}>Real-time Protection</Text>
                 <Text style={styles.networkStatus}>{realTimeProtection ? 'Active' : 'Inactive'}</Text>
               </LinearGradient>
-            </View>
+            </TouchableOpacity>
             
-            <View style={styles.networkCard}>
+            <TouchableOpacity style={styles.networkCard} onPress={async () => { const v = !killSwitch; setKillSwitch(v); await toggleAndPersist('killSwitch', v); }} testID="card-killswitch">
               <LinearGradient
                 colors={[Colors.cardBackground, '#2A2A2A']}
                 style={styles.networkGradient}
@@ -1191,9 +1169,9 @@ export default function SecurityScreen() {
                 <Text style={styles.networkTitle}>Kill Switch</Text>
                 <Text style={styles.networkStatus}>{killSwitch ? 'Enabled' : 'Disabled'}</Text>
               </LinearGradient>
-            </View>
+            </TouchableOpacity>
             
-            <View style={styles.networkCard}>
+            <TouchableOpacity style={styles.networkCard} onPress={async () => { const v = !autoConnect; setAutoConnect(v); await toggleAndPersist('autoConnect', v); }} testID="card-autoconnect">
               <LinearGradient
                 colors={[Colors.cardBackground, '#2A2A2A']}
                 style={styles.networkGradient}
@@ -1204,10 +1182,34 @@ export default function SecurityScreen() {
                 <Text style={styles.networkTitle}>Auto-Connect</Text>
                 <Text style={styles.networkStatus}>{autoConnect ? 'Enabled' : 'Disabled'}</Text>
               </LinearGradient>
-            </View>
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
+
+      <Modal visible={serverPickerVisible} transparent animationType="fade" onRequestClose={() => setServerPickerVisible(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Select VPN Server</Text>
+            <ScrollView style={styles.modalList} contentContainerStyle={{ paddingVertical: 8 }}>
+              {availableServers.map(s => (
+                <Pressable key={s.id} style={styles.modalItem} onPress={() => connectToServer(s.id)} testID={`server-${s.id}`}>
+                  <View style={styles.modalItemLeft}>
+                    <Server size={18} color={Colors.accent} />
+                    <Text style={styles.modalItemText}>{s.location}</Text>
+                  </View>
+                  <Text style={styles.modalItemMeta}>{s.country} • {s.latency}ms</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={[styles.vpnButton, styles.secondaryVpnButton]} onPress={() => setServerPickerVisible(false)}>
+                <Text style={[styles.vpnButtonText, styles.secondaryVpnButtonText]}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -1751,5 +1753,60 @@ const styles = StyleSheet.create({
   permissionStatusText: {
     fontSize: 11,
     fontWeight: '600',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 500,
+    backgroundColor: '#1E1E1E',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    padding: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 12,
+  },
+  modalList: {
+    maxHeight: 360,
+    borderTopWidth: 1,
+    borderTopColor: Colors.cardBorder,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.cardBorder,
+  },
+  modalItem: {
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.cardBorder,
+  },
+  modalItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  modalItemText: {
+    color: Colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  modalItemMeta: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+  },
+  modalActions: {
+    marginTop: 12,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
   },
 });

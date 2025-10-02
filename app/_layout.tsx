@@ -32,6 +32,7 @@ function RootLayoutNav() {
       <Stack.Screen name="credits/add" options={{ headerShown: false }} />
       <Stack.Screen name="subscription/success" options={{ headerShown: false }} />
       <Stack.Screen name="credits/success" options={{ headerShown: false }} />
+      <Stack.Screen name="security/vpn-servers" options={{ headerShown: false }} />
     </Stack>
   );
 }

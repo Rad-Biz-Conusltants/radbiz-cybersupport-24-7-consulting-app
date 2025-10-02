@@ -1,0 +1,124 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    function isTech() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'tech';
+    }
+    
+    function isSameCompany(userId) {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.company == 
+             get(/databases/$(database)/documents/users/$(userId)).data.company;
+    }
+    
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin() || isSameCompany(userId);
+      allow create: if isAuthenticated();
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+    
+    match /individual_users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId) || isAdmin();
+    }
+    
+    match /business_users/{userId} {
+      allow read: if isOwner(userId) || isAdmin() || isSameCompany(userId);
+      allow write: if isOwner(userId) || isAdmin();
+    }
+    
+    match /subscriptions/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId) || isAdmin();
+    }
+    
+    match /tickets/{ticketId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isTech() ||
+        isAdmin() ||
+        isSameCompany(resource.data.userId)
+      );
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isTech() ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+    
+    match /user_activities/{activityId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+    
+    match /purchases/{purchaseId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+    
+    match /checkout_sessions/{sessionId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+    
+    match /support_chats/{chatId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.techId == request.auth.uid ||
+        isTech() ||
+        isAdmin()
+      );
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.techId == request.auth.uid ||
+        isTech() ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+    
+    match /tech_support_users/{techId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isOwner(techId);
+    }
+    
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

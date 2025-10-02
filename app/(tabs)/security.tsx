@@ -7,13 +7,11 @@ import { router } from 'expo-router';
 let Device: any = null;
 let Application: any = null;
 let SecureStore: any = null;
-let ClipboardMod: any = null;
 
 if (Platform.OS !== 'web') {
   Device = require('expo-device');
   Application = require('expo-application');
   SecureStore = require('expo-secure-store');
-  ClipboardMod = require('expo-clipboard');
 }
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/auth-provider';
@@ -607,15 +605,18 @@ export default function SecurityScreen() {
     try {
       if (Platform.OS === 'web') {
         await (navigator as any)?.clipboard?.writeText?.(report);
-        Alert.alert('Security Report', 'Copied to clipboard.');
-        return;
+        Alert.alert('Security Report', 'Report copied to clipboard successfully.');
+      } else {
+        Alert.alert('Security Report', report, [
+          { text: 'OK' },
+          {
+            text: 'Share',
+            onPress: () => {
+              console.log('Share report:', report);
+            }
+          }
+        ]);
       }
-      if (ClipboardMod?.setStringAsync) {
-        await ClipboardMod.setStringAsync(report);
-        Alert.alert('Security Report', 'Copied to clipboard.');
-        return;
-      }
-      Alert.alert('Security Report', report, [{ text: 'OK' }]);
     } catch (e) {
       console.error('Copy report failed', e);
       Alert.alert('Security Report', report, [{ text: 'OK' }]);

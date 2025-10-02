@@ -1,0 +1,51 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isValidImageUpload() {
+      return request.resource.size < 5 * 1024 * 1024 &&
+             request.resource.contentType.matches('image/.*');
+    }
+    
+    function isValidFileUpload() {
+      return request.resource.size < 10 * 1024 * 1024;
+    }
+    
+    match /user-uploads/{userId}/{allPaths=**} {
+      allow read: if isAuthenticated() && isOwner(userId);
+      allow write: if isAuthenticated() && isOwner(userId) && isValidFileUpload();
+    }
+    
+    match /ticket-attachments/{ticketId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isValidFileUpload();
+    }
+    
+    match /profile-pictures/{userId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isOwner(userId) && isValidImageUpload();
+    }
+    
+    match /chat-attachments/{chatId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isValidFileUpload();
+    }
+    
+    match /security-reports/{userId}/{allPaths=**} {
+      allow read: if isAuthenticated() && isOwner(userId);
+      allow write: if isAuthenticated() && isOwner(userId) && isValidFileUpload();
+    }
+    
+    match /backups/{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

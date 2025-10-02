@@ -10,6 +10,7 @@ import { TicketsProvider } from "@/providers/tickets-provider";
 import { UsersProvider } from "@/providers/users-provider";
 import { StorageProvider } from "@/providers/storage-provider";
 import { SupportProvider } from "@/providers/support-provider";
+import { trpc, trpcClient } from "@/lib/trpc";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -49,22 +50,24 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <GestureHandlerRootView style={styles.gestureHandler}>
-        <StorageProvider>
-          <AuthProvider>
-            <SubscriptionProvider>
-              <TicketsProvider>
-                <UsersProvider>
-                  <SupportProvider>
-                    <RootLayoutNav />
-                  </SupportProvider>
-                </UsersProvider>
-              </TicketsProvider>
-            </SubscriptionProvider>
-          </AuthProvider>
-        </StorageProvider>
-      </GestureHandlerRootView>
-    </QueryClientProvider>
+    <trpc.Provider client={trpcClient} queryClient={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        <GestureHandlerRootView style={styles.gestureHandler}>
+          <StorageProvider>
+            <AuthProvider>
+              <SubscriptionProvider>
+                <TicketsProvider>
+                  <UsersProvider>
+                    <SupportProvider>
+                      <RootLayoutNav />
+                    </SupportProvider>
+                  </UsersProvider>
+                </TicketsProvider>
+              </SubscriptionProvider>
+            </AuthProvider>
+          </StorageProvider>
+        </GestureHandlerRootView>
+      </QueryClientProvider>
+    </trpc.Provider>
   );
 }

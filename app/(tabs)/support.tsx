@@ -167,6 +167,25 @@ export default function SupportScreen() {
               </View>
             </LinearGradient>
           </TouchableOpacity>
+          
+          <View style={styles.needHelpSection}>
+            <Text style={styles.needHelpTitle}>Need Immediate Help?</Text>
+            <Text style={styles.needHelpText}>
+              For urgent security issues or critical support needs, connect instantly with our best available agent.
+            </Text>
+            <TouchableOpacity 
+              style={styles.urgentButton}
+              onPress={handleUrgentConnection}
+            >
+              <LinearGradient
+                colors={[Colors.error, '#DC2626']}
+                style={styles.urgentGradient}
+              >
+                <Zap size={20} color={Colors.textPrimary} />
+                <Text style={styles.urgentButtonText}>Connect to Best Agent Now</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Available Agents */}
@@ -619,5 +638,41 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textPrimary,
     opacity: 0.9,
+  },
+  needHelpSection: {
+    marginTop: 16,
+    backgroundColor: Colors.cardBackground,
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  needHelpTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 8,
+  },
+  needHelpText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  urgentButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  urgentGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    gap: 8,
+  },
+  urgentButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.textPrimary,
   },
 });

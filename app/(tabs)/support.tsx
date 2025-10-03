@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MessageCircle, Clock, CheckCircle, User, Send, Paperclip, Star, Monitor, Zap } from 'lucide-react-native';
+import { MessageCircle, Clock, CheckCircle, User, Send, Paperclip, Star, Monitor, Zap, DollarSign } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import Colors from '@/constants/colors';
 import { useSupport } from '@/providers/support-provider';
 import ChatScreen from '@/components/ChatScreen';
@@ -10,6 +11,7 @@ import ChatScreen from '@/components/ChatScreen';
 
 export default function SupportScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [message, setMessage] = useState('');
   const [showChatModal, setShowChatModal] = useState(false);
   
@@ -149,6 +151,22 @@ export default function SupportScreen() {
               </LinearGradient>
             </TouchableOpacity>
           </View>
+          
+          <TouchableOpacity 
+            style={styles.depositCard}
+            onPress={() => router.push('/support/payment?sessionId=new')}
+          >
+            <LinearGradient
+              colors={[Colors.success, '#059669']}
+              style={styles.depositGradient}
+            >
+              <DollarSign size={28} color={Colors.textPrimary} />
+              <View style={styles.depositContent}>
+                <Text style={styles.depositTitle}>Pay Deposit & Get Support</Text>
+                <Text style={styles.depositSubtext}>Secure payment • Instant connection</Text>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
 
         {/* Available Agents */}
@@ -329,6 +347,7 @@ const styles = StyleSheet.create({
   actionsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: 16,
   },
   actionCard: {
     width: '48%',
@@ -577,5 +596,28 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginLeft: 8,
   },
-
+  depositCard: {
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  depositGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+    gap: 16,
+  },
+  depositContent: {
+    flex: 1,
+  },
+  depositTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  depositSubtext: {
+    fontSize: 14,
+    color: Colors.textPrimary,
+    opacity: 0.9,
+  },
 });

@@ -38,6 +38,9 @@ export interface ChatSession {
   priority: number;
   queuePosition?: number;
   estimatedWaitTime?: number;
+  depositAmount?: number;
+  depositPaid?: boolean;
+  paymentSessionId?: string;
 }
 
 export interface QueueItem {
@@ -77,6 +80,10 @@ interface SupportContextType {
   requestRemoteAssistance: () => Promise<ChatSession | null>;
   urgentConnectionRequest: () => Promise<ChatSession | null>;
   sendQuickMessage: (message: string) => Promise<ChatSession | null>;
+  
+  // Payment functions
+  createSupportDepositCheckout: (depositAmount: number, sessionId: string) => Promise<{ success: boolean; checkoutUrl?: string; sessionId?: string; error?: string }>;
+  verifyDepositPayment: (paymentSessionId: string, sessionId: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const STORAGE_KEYS = {
@@ -746,6 +753,112 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
     return session;
   }, [findBestAgent, createChatSession, currentSession]);
 
+  const createSupportDepositCheckout = useCallback(async (depositAmount: number, sessionId: string) => {
+    try {
+      console.log(`Creating deposit checkout for session ${sessionId}, amount: ${depositAmount}`);
+      
+      if (depositAmount < 10 || depositAmount > 10000) {
+        throw new Error('Deposit amount must be between $10 and $10,000');
+      }
+      
+      const session = activeSessions.find(s => s.id === sessionId);
+      if (!session) {
+        throw new Error('Session not found');
+      }
+      
+      // Mock checkout URL for demo
+      const checkoutUrl = `demo://checkout/support-deposit?amount=${depositAmount}&sessionId=${sessionId}`;
+      const paymentSessionId = `payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Update session with deposit info
+      setActiveSessions(prev => prev.map(s => 
+        s.id === sessionId 
+          ? { ...s, depositAmount, paymentSessionId }
+          : s
+      ));
+      
+      if (currentSession?.id === sessionId) {
+        setCurrentSession(prev => prev ? {
+          ...prev,
+          depositAmount,
+          paymentSessionId
+        } : null);
+      }
+      
+      return {
+        success: true,
+        checkoutUrl,
+        sessionId: paymentSessionId
+      };
+    } catch (error) {
+      console.error('Create deposit checkout error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }, [activeSessions, currentSession]);
+  
+  const verifyDepositPayment = useCallback(async (paymentSessionId: string, sessionId: string) => {
+    try {
+      console.log(`Verifying deposit payment ${paymentSessionId} for session ${sessionId}`);
+      
+      const session = activeSessions.find(s => s.id === sessionId);
+      if (!session) {
+        throw new Error('Session not found');
+      }
+      
+      if (session.paymentSessionId !== paymentSessionId) {
+        throw new Error('Payment session mismatch');
+      }
+      
+      // Mark deposit as paid
+      setActiveSessions(prev => prev.map(s => 
+        s.id === sessionId 
+          ? { ...s, depositPaid: true }
+          : s
+      ));
+      
+      if (currentSession?.id === sessionId) {
+        setCurrentSession(prev => prev ? {
+          ...prev,
+          depositPaid: true
+        } : null);
+      }
+      
+      // Add confirmation message
+      const confirmationMessage: ChatMessage = {
+        id: `msg_${Date.now()}`,
+        text: `Payment of ${session.depositAmount} received successfully! Your support session is now active.`,
+        sender: 'agent',
+        timestamp: new Date(),
+        agentName: 'Payment System',
+        type: 'system'
+      };
+      
+      setActiveSessions(prev => prev.map(s => 
+        s.id === sessionId 
+          ? { ...s, messages: [...s.messages, confirmationMessage] }
+          : s
+      ));
+      
+      if (currentSession?.id === sessionId) {
+        setCurrentSession(prev => prev ? {
+          ...prev,
+          messages: [...prev.messages, confirmationMessage]
+        } : null);
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Verify deposit payment error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }, [activeSessions, currentSession]);
+
   return useMemo(() => ({
     agents,
     activeSessions,
@@ -770,6 +883,9 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
     requestRemoteAssistance,
     urgentConnectionRequest,
     sendQuickMessage,
+    
+    createSupportDepositCheckout,
+    verifyDepositPayment,
   }), [
     agents,
     activeSessions,
@@ -790,5 +906,7 @@ export const [SupportProvider, useSupport] = createContextHook<SupportContextTyp
     requestRemoteAssistance,
     urgentConnectionRequest,
     sendQuickMessage,
+    createSupportDepositCheckout,
+    verifyDepositPayment,
   ]);
 });

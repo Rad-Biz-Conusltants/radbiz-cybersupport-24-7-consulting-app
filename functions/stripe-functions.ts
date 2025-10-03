@@ -563,10 +563,154 @@ async function updateSubscriptionStatus(subscriptionId: string, statusData: any)
   console.log(`Updating subscription ${subscriptionId}:`, statusData);
 }
 
+/**
+ * Create Stripe Checkout Session for Support Deposit
+ */
+export async function createSupportDepositCheckout(request: {
+  depositAmount: number;
+  sessionId: string;
+  userId: string;
+  userEmail: string;
+  returnUrl: string;
+  cancelUrl: string;
+}) {
+  try {
+    const { depositAmount, sessionId, userId, userEmail, returnUrl, cancelUrl } = request;
+    
+    if (depositAmount < 10 || depositAmount > 10000) {
+      throw new Error('Deposit amount must be between $10 and $10,000');
+    }
+
+    if (IS_DEMO && FEATURES.mockPayments) {
+      console.log('Demo mode: Creating mock support deposit checkout');
+      return {
+        success: true,
+        checkoutUrl: `demo://checkout/support-deposit?amount=${depositAmount}&sessionId=${sessionId}`,
+        sessionId: `demo_deposit_session_${Date.now()}`,
+      };
+    }
+
+    const processingFee = depositAmount * 0.029 + 0.30;
+    const totalAmount = Math.round((depositAmount + processingFee) * 100);
+
+    const checkoutSession = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      customer_email: userEmail,
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Support Session Deposit',
+              description: `Deposit for support session ${sessionId}`,
+              images: ['https://your-app-domain.com/support-icon.png'],
+            },
+            unit_amount: totalAmount,
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url: `${returnUrl}?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: cancelUrl,
+      metadata: {
+        type: 'support_deposit',
+        userId,
+        supportSessionId: sessionId,
+        depositAmount: depositAmount.toString(),
+      },
+    });
+
+    return {
+      success: true,
+      checkoutUrl: checkoutSession.url,
+      sessionId: checkoutSession.id,
+    };
+  } catch (error) {
+    console.error('Create support deposit checkout error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * Verify Support Deposit Payment
+ */
+export async function verifySupportDepositPayment(request: {
+  sessionId: string;
+  userId: string;
+  supportSessionId: string;
+}) {
+  try {
+    const { sessionId, userId, supportSessionId } = request;
+    
+    if (IS_DEMO && FEATURES.mockPayments) {
+      console.log('Demo mode: Verifying mock support deposit payment');
+      return {
+        success: true,
+        depositDetails: {
+          sessionId,
+          supportSessionId,
+          depositAmount: 50,
+          processingFee: 1.75,
+          totalAmount: 51.75,
+          paymentDate: new Date().toISOString(),
+          status: 'paid',
+        },
+      };
+    }
+    
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    
+    if (!session) {
+      throw new Error('Session not found');
+    }
+    
+    if (session.metadata?.userId !== userId) {
+      throw new Error('Session does not belong to user');
+    }
+    
+    if (session.metadata?.supportSessionId !== supportSessionId) {
+      throw new Error('Support session mismatch');
+    }
+    
+    if (session.payment_status !== 'paid') {
+      throw new Error('Payment not completed');
+    }
+    
+    const depositAmount = parseFloat(session.metadata?.depositAmount || '0');
+    const totalAmount = (session.amount_total || 0) / 100;
+    const processingFee = totalAmount - depositAmount;
+    
+    return {
+      success: true,
+      depositDetails: {
+        sessionId,
+        supportSessionId,
+        depositAmount,
+        processingFee,
+        totalAmount,
+        paymentDate: new Date(session.created * 1000).toISOString(),
+        status: 'paid',
+      },
+    };
+  } catch (error) {
+    console.error('Verify support deposit payment error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
 // Export functions for deployment
 export const functions = {
   createCreditCheckout,
   createSubscriptionCheckout,
   verifyPurchase,
   handleStripeWebhook,
+  createSupportDepositCheckout,
+  verifySupportDepositPayment,
 };

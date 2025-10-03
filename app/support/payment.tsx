@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Platform, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CreditCard, DollarSign, Lock, CheckCircle, ArrowLeft, Smartphone } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -91,67 +91,33 @@ export default function SupportPaymentScreen() {
     setIsProcessing(true);
     
     try {
-      console.log(`Processing ${selectedMethod} payment for $${totalAmount.toFixed(2)}`);
+      console.log(`Processing ${selectedMethod} payment for ${totalAmount.toFixed(2)}`);
       
-      if (selectedMethod === 'card') {
-        const result = await createSupportDepositCheckout(totalAmount, sessionId);
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      const result = await createSupportDepositCheckout(totalAmount, sessionId);
+      
+      if (result.success) {
+        console.log('Payment processed successfully:', result.sessionId);
         
-        if (result.success && result.checkoutUrl) {
-          console.log('Payment checkout created:', result.sessionId);
-          
-          if (Platform.OS === 'web') {
-            window.location.href = result.checkoutUrl;
-          } else {
-            await Linking.openURL(result.checkoutUrl);
-          }
-          
-          setTimeout(async () => {
-            const verifyResult = await verifyDepositPayment(result.sessionId!, sessionId);
-            
-            if (verifyResult.success) {
-              Alert.alert(
-                'Payment Successful',
-                `Your deposit of $${totalAmount.toFixed(2)} has been processed successfully!`,
-                [
-                  {
-                    text: 'Continue to Support',
-                    onPress: () => router.back()
-                  }
-                ]
-              );
-            } else {
-              Alert.alert('Payment Error', verifyResult.error || 'Failed to verify payment');
-            }
-          }, 2000);
+        const verifyResult = await verifyDepositPayment(result.sessionId!, sessionId);
+        
+        if (verifyResult.success) {
+          Alert.alert(
+            'Payment Successful',
+            `Your deposit of ${totalAmount.toFixed(2)} has been processed successfully! You can now start your support session.`,
+            [
+              {
+                text: 'Start Support Session',
+                onPress: () => router.back()
+              }
+            ]
+          );
         } else {
-          Alert.alert('Payment Error', result.error || 'Failed to create checkout session');
+          Alert.alert('Payment Error', verifyResult.error || 'Failed to verify payment');
         }
-      } else if (selectedMethod === 'paypal') {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        Alert.alert(
-          'Payment Successful',
-          `Your PayPal payment of $${totalAmount.toFixed(2)} has been processed!`,
-          [
-            {
-              text: 'Continue to Support',
-              onPress: () => router.back()
-            }
-          ]
-        );
-      } else if (selectedMethod === 'apple_pay') {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        Alert.alert(
-          'Payment Successful',
-          `Your Apple Pay payment of $${totalAmount.toFixed(2)} has been processed!`,
-          [
-            {
-              text: 'Continue to Support',
-              onPress: () => router.back()
-            }
-          ]
-        );
+      } else {
+        Alert.alert('Payment Error', result.error || 'Failed to process payment');
       }
     } catch (error) {
       console.error('Payment error:', error);

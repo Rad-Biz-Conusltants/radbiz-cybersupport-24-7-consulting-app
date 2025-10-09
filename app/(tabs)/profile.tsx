@@ -39,11 +39,16 @@ export default function ProfileScreen() {
           onPress: async () => {
             setIsLoading(true);
             try {
+              console.log('Starting sign out process...');
               await signOut();
-              router.replace('/');
+              console.log('Sign out successful, navigating to login...');
+              
+              setTimeout(() => {
+                router.replace('/(auth)/login');
+              }, 100);
             } catch (error) {
+              console.error('Sign out error:', error);
               Alert.alert('Error', 'Failed to sign out. Please try again.');
-            } finally {
               setIsLoading(false);
             }
           }

@@ -205,14 +205,14 @@ export default function ProfileScreen() {
                 </View>
               </View>
               
-              {!subscriptionStatus.isActive && (
-                <TouchableOpacity 
-                  style={styles.upgradeButton}
-                  onPress={() => router.push('/checkout')}
-                >
-                  <Text style={styles.upgradeButtonText}>Upgrade Plan</Text>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity 
+                style={styles.upgradeButton}
+                onPress={() => router.push('/subscription/upgrade')}
+              >
+                <Text style={styles.upgradeButtonText}>
+                  {subscriptionStatus.isActive ? 'Manage Subscription' : 'Upgrade Plan'}
+                </Text>
+              </TouchableOpacity>
             </LinearGradient>
           </View>
         </View>

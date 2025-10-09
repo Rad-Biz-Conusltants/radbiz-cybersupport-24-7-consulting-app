@@ -5,13 +5,16 @@ import { Shield, Check, CreditCard, X, Monitor, DollarSign } from 'lucide-react-
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/providers/auth-provider';
+import { useSubscription } from '@/providers/subscription-provider';
 import * as WebBrowser from 'expo-web-browser';
 import { Asset } from 'expo-asset';
+import { FEATURES, IS_DEMO } from '@/constants/environment';
 
 import Colors from '@/constants/colors';
 
 export default function CheckoutScreen() {
   const { user } = useAuth();
+  const { setSubscription } = useSubscription();
   const { plan: urlPlan } = useLocalSearchParams<{ plan?: string }>();
   const [selectedPlan, setSelectedPlan] = useState<'individual' | 'business' | 'guest'>(urlPlan === 'guest' ? 'guest' : (user?.planType || 'individual'));
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
@@ -121,41 +124,37 @@ export default function CheckoutScreen() {
           const checkoutUrl = `${assetUri}?${params}`;
           window.location.assign(checkoutUrl);
         } else {
-          // For mobile, use Stripe Checkout API
-          const response = await fetch('https://toolkit.rork.com/stripe/create-subscription', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              plan: selectedPlan,
-              billingCycle: billingCycle,
-              userId: user.id,
-              userEmail: user.email,
-              returnUrl: 'radbiz://subscription/success',
-              cancelUrl: 'radbiz://checkout'
-            })
-          });
-
-          const data = await response.json();
-          
-          if (data.checkoutUrl) {
-            console.log('Opening checkout URL:', data.checkoutUrl);
-            const result = await WebBrowser.openBrowserAsync(data.checkoutUrl);
-            console.log('WebBrowser result:', result.type);
-            
-            // After browser closes, navigate to success page
-            if (result.type === 'cancel' || result.type === 'dismiss') {
-              router.push('/subscription/success');
-            }
+          // For mobile, use demo mode or mock subscription
+          if (IS_DEMO || FEATURES.mockPayments) {
+            console.log('Demo mode: Creating mock subscription');
+            const mockSubscription = {
+              plan: selectedPlan as 'individual' | 'business',
+              billingCycle,
+              status: 'trial' as const,
+              nextBillingDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+              trialEndDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+              subscriptionId: 'demo-sub-' + Date.now(),
+              customerId: 'demo-customer-' + Date.now(),
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            };
+            await setSubscription(mockSubscription);
+            router.push('/subscription/success');
           } else {
-            throw new Error(data.error || 'Failed to create checkout session');
+            // Production mode - would need real Stripe integration
+            Alert.alert(
+              'Subscription Setup',
+              'Stripe integration is not fully configured for mobile. Please use the web version or contact support.',
+              [
+                { text: 'OK', onPress: () => router.back() }
+              ]
+            );
           }
         }
       }
     } catch (error) {
       console.error('Checkout error:', error);
-      Alert.alert('Error', 'Failed to open checkout. Please try again.');
+      Alert.alert('Error', 'Failed to process checkout. Please try again.');
     } finally {
       setLoading(false);
     }

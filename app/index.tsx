@@ -1,19 +1,12 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Shield, Monitor, ArrowRight, Clock, DollarSign } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '@/providers/auth-provider';
 import Colors from '@/constants/colors';
 
 export default function LandingScreen() {
-  const { user } = useAuth();
-  useEffect(() => {
-    if (user) {
-      router.replace('/(tabs)/home' as any);
-    }
-  }, [user]);
 
   const supportOptions = [
     {

@@ -4,8 +4,8 @@ import createContextHook from '@nkzw/create-context-hook';
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { Platform } from 'react-native';
 import { FIREBASE_CONFIG, FEATURES, IS_DEMO } from '@/constants/environment';
+import { router } from 'expo-router';
 
 // Initialize Firebase only in production mode
 let app: any = null;
@@ -234,6 +234,9 @@ export const [AuthProvider, useAuth] = createContextHook<AuthContextType>(() => 
       setFirebaseUser(null);
       await AsyncStorage.removeItem('user');
       await AsyncStorage.removeItem('subscription');
+      
+      // Navigate to landing page after sign out
+      router.replace('/');
     } catch (error) {
       console.error('Sign out error:', error);
       throw error;

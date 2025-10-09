@@ -1,10 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { AuthProvider } from "@/providers/auth-provider";
+import { AuthProvider, useAuth } from "@/providers/auth-provider";
 import { SubscriptionProvider } from "@/providers/subscription-provider";
 import { TicketsProvider } from "@/providers/tickets-provider";
 import { UsersProvider } from "@/providers/users-provider";
@@ -17,15 +17,36 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 function RootLayoutNav() {
+  const { user, isLoading } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    const firstSegment = segments[0] as string | undefined;
+    const inTabsGroup = firstSegment === '(tabs)';
+    const onLandingPage = !firstSegment || firstSegment === 'index';
+
+    const protectedRoutes = ['tickets', 'users', 'security', 'profile'];
+    const isProtectedRoute = protectedRoutes.some(route => segments.includes(route));
+
+    if (!user && (inTabsGroup || isProtectedRoute)) {
+      router.replace('/');
+    } else if (user && onLandingPage) {
+      router.replace('/(tabs)/home');
+    }
+  }, [user, segments, isLoading, router]);
+
   return (
     <Stack screenOptions={{ headerBackTitle: "Back" }}>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="checkout" options={{ 
         presentation: "modal",
         headerShown: false 
       }} />
-      <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="tickets/index" options={{ headerShown: false }} />
       <Stack.Screen name="tickets/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="tickets/new" options={{ headerShown: false }} />
@@ -34,6 +55,10 @@ function RootLayoutNav() {
       <Stack.Screen name="subscription/success" options={{ headerShown: false }} />
       <Stack.Screen name="credits/success" options={{ headerShown: false }} />
       <Stack.Screen name="security/vpn-servers" options={{ headerShown: false }} />
+      <Stack.Screen name="support/payment" options={{ headerShown: false }} />
+      <Stack.Screen name="profile/edit" options={{ headerShown: false }} />
+      <Stack.Screen name="profile/notifications" options={{ headerShown: false }} />
+      <Stack.Screen name="profile/billing" options={{ headerShown: false }} />
     </Stack>
   );
 }

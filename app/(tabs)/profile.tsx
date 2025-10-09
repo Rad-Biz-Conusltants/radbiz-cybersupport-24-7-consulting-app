@@ -41,10 +41,10 @@ export default function ProfileScreen() {
             try {
               console.log('Starting sign out process...');
               await signOut();
-              console.log('Sign out successful, navigating to login...');
+              console.log('Sign out successful, navigating to landing page...');
               
               setTimeout(() => {
-                router.replace('/(auth)/login');
+                router.replace('/');
               }, 100);
             } catch (error) {
               console.error('Sign out error:', error);

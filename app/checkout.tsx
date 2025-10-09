@@ -104,26 +104,53 @@ export default function CheckoutScreen() {
           { text: 'Start Getting Support', onPress: () => router.replace('/(tabs)/support') }
         ]);
       } else {
-        console.log('Preparing checkout asset for user:', user.id);
-        const asset = Asset.fromModule(require('@/assets/checkout.html'));
-        if (!asset.downloaded) {
-          await asset.downloadAsync();
-        }
-        const assetUri = asset.localUri ?? asset.uri;
-        const params = new URLSearchParams({
-          plan: selectedPlan,
-          billing: billingCycle,
-          userId: user.id,
-          userEmail: user.email,
-        }).toString();
-        const checkoutUrl = `${assetUri}?${params}`;
-        console.log('Checkout URL resolved:', checkoutUrl);
-
+        console.log('Creating subscription checkout for user:', user.id);
+        
         if (Platform.OS === 'web') {
+          const asset = Asset.fromModule(require('@/assets/checkout.html'));
+          if (!asset.downloaded) {
+            await asset.downloadAsync();
+          }
+          const assetUri = asset.localUri ?? asset.uri;
+          const params = new URLSearchParams({
+            plan: selectedPlan,
+            billing: billingCycle,
+            userId: user.id,
+            userEmail: user.email,
+          }).toString();
+          const checkoutUrl = `${assetUri}?${params}`;
           window.location.assign(checkoutUrl);
         } else {
-          const result = await WebBrowser.openBrowserAsync(checkoutUrl);
-          console.log('WebBrowser result', result.type);
+          // For mobile, use Stripe Checkout API
+          const response = await fetch('https://toolkit.rork.com/stripe/create-subscription', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              plan: selectedPlan,
+              billingCycle: billingCycle,
+              userId: user.id,
+              userEmail: user.email,
+              returnUrl: 'radbiz://subscription/success',
+              cancelUrl: 'radbiz://checkout'
+            })
+          });
+
+          const data = await response.json();
+          
+          if (data.checkoutUrl) {
+            console.log('Opening checkout URL:', data.checkoutUrl);
+            const result = await WebBrowser.openBrowserAsync(data.checkoutUrl);
+            console.log('WebBrowser result:', result.type);
+            
+            // After browser closes, navigate to success page
+            if (result.type === 'cancel' || result.type === 'dismiss') {
+              router.push('/subscription/success');
+            }
+          } else {
+            throw new Error(data.error || 'Failed to create checkout session');
+          }
         }
       }
     } catch (error) {

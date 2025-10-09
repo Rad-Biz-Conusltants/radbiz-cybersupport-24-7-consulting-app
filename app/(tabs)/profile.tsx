@@ -208,7 +208,7 @@ export default function ProfileScreen() {
               {!subscriptionStatus.isActive && (
                 <TouchableOpacity 
                   style={styles.upgradeButton}
-                  onPress={() => Alert.alert('Upgrade', 'Subscription upgrade coming soon')}
+                  onPress={() => router.push('/checkout')}
                 >
                   <Text style={styles.upgradeButtonText}>Upgrade Plan</Text>
                 </TouchableOpacity>

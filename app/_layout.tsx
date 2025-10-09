@@ -31,9 +31,13 @@ function RootLayoutNav() {
     const protectedRoutes = ['tickets', 'users', 'security', 'profile'];
     const isProtectedRoute = protectedRoutes.some(route => segments.includes(route));
 
+    console.log('Navigation check:', { user: !!user, firstSegment, inTabsGroup, onLandingPage, isProtectedRoute });
+
     if (!user && (inTabsGroup || isProtectedRoute)) {
+      console.log('Redirecting to landing page - user not authenticated');
       router.replace('/');
     } else if (user && onLandingPage) {
+      console.log('Redirecting to home - user authenticated');
       router.replace('/(tabs)/home');
     }
   }, [user, segments, isLoading, router]);

@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/colors';
 import { useSupport } from '@/providers/support-provider';
+import { useSubscription } from '@/providers/subscription-provider';
 import ChatScreen from '@/components/ChatScreen';
 
 
@@ -23,6 +24,10 @@ export default function SupportScreen() {
     urgentConnectionRequest,
     sendQuickMessage,
   } = useSupport();
+  
+  const { getSubscriptionStatus } = useSubscription();
+  const { isActive, isOnTrial } = getSubscriptionStatus();
+  const hasActiveSubscription = isActive || isOnTrial;
 
 
 
@@ -122,70 +127,54 @@ export default function SupportScreen() {
         {/* Quick Actions */}
         <View style={styles.quickActions}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.actionsGrid}>
-            <TouchableOpacity 
-              style={styles.actionCard}
-              onPress={handleFindNextAvailable}
-            >
-              <LinearGradient
-                colors={[Colors.primary, Colors.primaryDark]}
-                style={styles.actionGradient}
-              >
-                <MessageCircle size={24} color={Colors.textPrimary} />
-                <Text style={styles.actionText}>Find Next Available Support</Text>
-                <Text style={styles.actionSubtext}>Opens chat instantly</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.actionCard}
-              onPress={handleRemoteAssistance}
-            >
-              <LinearGradient
-                colors={[Colors.accent, Colors.accentDark]}
-                style={styles.actionGradient}
-              >
-                <Monitor size={24} color={Colors.textPrimary} />
-                <Text style={styles.actionText}>Request Remote Assistance</Text>
-                <Text style={styles.actionSubtext}>Chat + TeamViewer access</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
           
-          <TouchableOpacity 
-            style={styles.depositCard}
-            onPress={() => router.push('/support/payment?sessionId=new')}
-          >
-            <LinearGradient
-              colors={[Colors.success, '#059669']}
-              style={styles.depositGradient}
-            >
-              <DollarSign size={28} color={Colors.textPrimary} />
-              <View style={styles.depositContent}>
-                <Text style={styles.depositTitle}>Pay Deposit & Get Support</Text>
-                <Text style={styles.depositSubtext}>Secure payment • Instant connection</Text>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-          
-          <View style={styles.needHelpSection}>
-            <Text style={styles.needHelpTitle}>Need Immediate Help?</Text>
-            <Text style={styles.needHelpText}>
-              For urgent security issues or critical support needs, connect instantly with our best available agent.
-            </Text>
+          {hasActiveSubscription ? (
+            <View style={styles.actionsGrid}>
+              <TouchableOpacity 
+                style={styles.actionCard}
+                onPress={handleFindNextAvailable}
+              >
+                <LinearGradient
+                  colors={[Colors.primary, Colors.primaryDark]}
+                  style={styles.actionGradient}
+                >
+                  <MessageCircle size={24} color={Colors.textPrimary} />
+                  <Text style={styles.actionText}>Find Next Available Support</Text>
+                  <Text style={styles.actionSubtext}>Opens chat instantly</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.actionCard}
+                onPress={handleRemoteAssistance}
+              >
+                <LinearGradient
+                  colors={[Colors.accent, Colors.accentDark]}
+                  style={styles.actionGradient}
+                >
+                  <Monitor size={24} color={Colors.textPrimary} />
+                  <Text style={styles.actionText}>Request Remote Assistance</Text>
+                  <Text style={styles.actionSubtext}>Chat + TeamViewer access</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          ) : (
             <TouchableOpacity 
-              style={styles.urgentButton}
-              onPress={handleUrgentConnection}
+              style={styles.depositCard}
+              onPress={() => router.push('/support/payment?sessionId=new')}
             >
               <LinearGradient
-                colors={[Colors.error, '#DC2626']}
-                style={styles.urgentGradient}
+                colors={[Colors.success, '#059669']}
+                style={styles.depositGradient}
               >
-                <Zap size={20} color={Colors.textPrimary} />
-                <Text style={styles.urgentButtonText}>Connect to Best Agent Now</Text>
+                <DollarSign size={28} color={Colors.textPrimary} />
+                <View style={styles.depositContent}>
+                  <Text style={styles.depositTitle}>Pay Deposit & Get Support</Text>
+                  <Text style={styles.depositSubtext}>Secure payment • Instant connection</Text>
+                </View>
               </LinearGradient>
             </TouchableOpacity>
-          </View>
+          )}
         </View>
 
         {/* Available Agents */}

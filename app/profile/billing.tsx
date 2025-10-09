@@ -59,13 +59,26 @@ export default function BillingScreen() {
   const handleManageSubscription = () => {
     Alert.alert(
       'Manage Subscription',
-      'This will redirect you to the billing portal where you can update your payment method, view invoices, and manage your subscription.',
+      'Choose an action:',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Continue', onPress: () => {
-          // In a real app, this would open the Stripe customer portal
-          Alert.alert('Info', 'Billing portal integration coming soon.');
-        }}
+        { 
+          text: 'View Subscription Details', 
+          onPress: () => {
+            if (subscription) {
+              const details = `Plan: ${subscription.plan}\nStatus: ${subscription.status}\nBilling Cycle: ${subscription.billingCycle}\nNext Billing: ${new Date(subscription.nextBillingDate).toLocaleDateString()}`;
+              Alert.alert('Subscription Details', details);
+            } else {
+              Alert.alert('No Subscription', 'You do not have an active subscription.');
+            }
+          }
+        },
+        { 
+          text: 'Upgrade/Change Plan', 
+          onPress: () => {
+            router.push('/checkout');
+          }
+        }
       ]
     );
   };

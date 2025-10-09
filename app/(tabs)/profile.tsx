@@ -41,7 +41,8 @@ export default function ProfileScreen() {
             try {
               console.log('Starting sign out process...');
               await signOut();
-              console.log('Sign out successful');
+              console.log('Sign out successful, navigating to landing page');
+              router.replace('/');
             } catch (error) {
               console.error('Sign out error:', error);
               Alert.alert('Error', 'Failed to sign out. Please try again.');
